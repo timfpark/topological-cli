@@ -1,0 +1,29 @@
+{
+    "name": "location-pipeline",
+    "nodes": {
+        "write-locations": {
+            "inputs": ["locations"],
+            "processor": {
+                "platform": "node.js",
+                "file": "./processors/writeLocation.js"
+            },
+            "outputs": []
+        },
+        "predict-arrivals": {
+            "inputs": ["locations"],
+            "processor": {
+                "platform": "node.js",
+                "file": "./processors/predictArrivals.js"
+            },
+            "outputs": ["estimatedArrivals"]
+        },
+        "notify-arrivals": {
+            "inputs": ["estimated-arrivals"],
+            "processor": {
+                "platform": "node.js",
+                "file": "./processors/notifyArrivals.js"
+            },
+            "outputs": []
+        }
+    }
+}

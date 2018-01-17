@@ -1,0 +1,46 @@
+{
+    "target": "kubernetes",
+    "tier": "production",
+    "namespace": "data-pipeline",
+    "connections": {
+        "locations": {
+            "type": "kafka",
+            "config": {
+                "keyField": "busId",
+                "topic": "locations",
+                "endpoint": "kafka-zookeeper.kafka.svc.cluster.local:2181"
+            }
+        },
+        "estimated-arrivals": {
+            "type": "kafka",
+            "config": {
+                "keyField": "busId",
+                "topic": "estimated-arrivals",
+                "endpoint": "kafka-zookeeper.kafka.svc.cluster.local:2181"
+            }
+        }
+    },
+    "deployments": {
+        "write-locations": {
+            "nodes": [
+                "write-locations"
+            ],
+            "instances": 4,
+            "concurrency": 30
+        },
+        "predict-arrivals": {
+            "nodes": [
+                "predict-arrivals"
+            ],
+            "instances": 8,
+            "concurrency": 10
+        },
+        "notify-arrivals": {
+            "nodes": [
+                "notify-arrivals"
+            ],
+            "instances": 8,
+            "concurrency": 10
+        }
+    }
+}
