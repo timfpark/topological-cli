@@ -8,7 +8,7 @@ func TestLoadEnvironment(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	environment, err := builder.LoadEnvironment()
 	if err != nil {
-		t.Errorf("LoadEnvironment did not complete successfully.")
+		t.Errorf("LoadEnvironment did not complete successfully: %s", err)
 	}
 
 	if environment.Target != "kubernetes" {
@@ -20,19 +20,19 @@ func TestLoadEnvironment(t *testing.T) {
 	}
 
 	if len(environment.Connections) != 2 {
-		t.Errorf("Nodes was not parsed correctly, got %d", len(environment.Connections))
+		t.Errorf("Connections was not parsed correctly, got %d", len(environment.Connections))
 	}
 
 	if _, ok := environment.Connections["locations"]; !ok {
 		t.Errorf("locations connection was not parsed correctly")
 	}
 
-	if environment.Connections["locations"].Type != "kafka" {
-		t.Errorf("locations Type was not parsed correctly, got: %s", environment.Connections["locations"].Type)
-	}
-
 	if len(environment.Connections["locations"].Config) != 3 {
 		t.Errorf("locations Connection config was not parsed correctly")
+	}
+
+	if len(environment.Deployments) != 3 {
+		t.Errorf("Deployments was not parsed correctly, got %d", len(environment.Connections))
 	}
 }
 
@@ -69,5 +69,24 @@ func TestLoadTopology(t *testing.T) {
 
 	if len(topology.Nodes["predict-arrivals"].Outputs) != 1 {
 		t.Errorf("predict-arrivals outputs was not parsed correctly")
+	}
+}
+
+func TestBuildDeployment(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+
+	_, err := builder.LoadTopology()
+	if err != nil {
+		t.Errorf("LoadTopology did not complete successfully.")
+	}
+
+	_, err = builder.LoadEnvironment()
+	if err != nil {
+		t.Errorf("LoadEnvironment did not complete successfully.")
+	}
+
+	_, err = builder.BuildDeployment("write-locations")
+	if err != nil {
+		t.Errorf("BuildDeployment did not complete successfully.")
 	}
 }

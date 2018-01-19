@@ -12,8 +12,9 @@ func main() {
 	}
 
 	builder := NewBuilder(os.Args[1], os.Args[2])
-	if !builder.Build() {
-		fmt.Printf("building environment failed.\n")
+	err := builder.Build()
+	if err != nil {
+		fmt.Printf("building environment failed with error: %s\n", err)
 		os.Exit(1)
 	}
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -15,10 +17,10 @@ type Builder struct {
 }
 
 func NewBuilder(topologyPath string, environmentPath string) *Builder {
-	b := new(Builder)
-	b.TopologyPath = topologyPath
-	b.EnvironmentPath = environmentPath
-	return b
+	return &Builder{
+		TopologyPath:    topologyPath,
+		EnvironmentPath: environmentPath,
+	}
 }
 
 func (b *Builder) LoadTopology() (topology *Topology, err error) {
@@ -49,19 +51,64 @@ func (b *Builder) LoadEnvironment() (environment *Environment, err error) {
 	return &b.Environment, nil
 }
 
-func (b *Builder) Build() bool {
+func (b *Builder) BuildDeployment(deploymentID string) (artifacts map[string]string, err error) {
+	var platform string
+
+	deployment := b.Environment.Deployments[deploymentID]
+
+	// check to make sure platform is the same across the nodes of the deployment
+	for nodeIdx, _ := range deployment.Nodes {
+		nodeId := deployment.Nodes[nodeIdx]
+		node := b.Topology.Nodes[nodeId]
+
+		if platform != "" && node.Processor.Platform != platform {
+			errString := fmt.Sprintf("mismatched platforms: %s vs %s for deployment id %s", platform, node.Processor.Platform, deploymentID)
+			return nil, errors.New(errString)
+		} else {
+			platform = node.Processor.Platform
+		}
+	}
+
+	var platformBuilder PlatformBuilder
+	switch platform {
+	case "node.js":
+		platformBuilder = &NodeJsPlatformBuilder{
+			Deployment:  deployment,
+			Topology:    b.Topology,
+			Environment: b.Environment,
+		}
+	default:
+		errString := fmt.Sprintf("unknown platform %s", platform)
+		return nil, errors.New(errString)
+	}
+
+	return platformBuilder.BuildDeployment()
+}
+
+func (b *Builder) Build() error {
 	_, err := b.LoadTopology()
 	if err != nil {
-		return false
+		return err
 	}
 
 	_, err = b.LoadEnvironment()
 	if err != nil {
-		return false
+		return err
 	}
-	os.Mkdir("build", 0755)
 
-	return true
+	err = os.Mkdir("build", 0755)
+	if err != nil {
+		return err
+	}
+
+	for deploymentID := range b.Environment.Deployments {
+		_, err = b.BuildDeployment(deploymentID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 	/*
 		fmt.Printf("topology => %+v\n", b.Topology)
 

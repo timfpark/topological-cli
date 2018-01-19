@@ -5,7 +5,10 @@
             "inputs": ["locations"],
             "processor": {
                 "platform": "node.js",
-                "file": "./processors/writeLocation.js"
+                "file": "./processors/writeLocation.js",
+                "dependencies": {
+                    "cassandra-driver": "^3.3.0"
+                }
             },
             "outputs": []
         },

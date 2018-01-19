@@ -4,7 +4,10 @@
     "namespace": "data-pipeline",
     "connections": {
         "locations": {
-            "type": "kafka",
+            "platform": "node.js",
+            "dependencies": {
+                "topological-kafka": "^1.0.4"
+            },
             "config": {
                 "keyField": "busId",
                 "topic": "locations",
@@ -12,7 +15,10 @@
             }
         },
         "estimated-arrivals": {
-            "type": "kafka",
+            "platform": "node.js",
+            "dependencies": {
+                "topological-kafka": "^1.0.4"
+            },
             "config": {
                 "keyField": "busId",
                 "topic": "estimated-arrivals",
