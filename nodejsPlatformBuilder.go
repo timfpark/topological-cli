@@ -27,7 +27,7 @@ func (b *NodeJsPlatformBuilder) collectDependencies() (dependencies map[string]s
 	return dependencies
 }
 
-func (b *NodeJsPlatformBuilder) FillPackageJson() (artifact string) {
+func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
 	dependencies := b.collectDependencies()
 	var dependencyStrings []string
 	for packageName, version := range dependencies {
@@ -35,20 +35,20 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (artifact string) {
 	}
 
 	return fmt.Sprintf(`{
-		"name": "stage-%s",
-		"version": "1.0.0",
-		"main": "stage.js",
-		"scripts": {
-			"start": "node stage.js",
-		},
-		"dependencies": {
-			"express": "^4.16.2",
-			"prom-client": "^10.2.2",
-			"request": "^2.83.0",
-			"topological": "^1.0.28",
-			%s
-		}
-	}`,
+    "name": "stage-%s",
+    "version": "1.0.0",
+    "main": "stage.js",
+    "scripts": {
+        "start": "node stage.js",
+    },
+    "dependencies": {
+        "express": "^4.16.2",
+        "prom-client": "^10.2.2",
+        "request": "^2.83.0",
+        "topological": "^1.0.28",
+        %s
+    }
+}`,
 		b.DeploymentID,
 		strings.Join(dependencyStrings, "\n"))
 }
@@ -66,11 +66,17 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 		return err
 	}
 
-	return nil
+	packageJsonPath := fmt.Sprintf("%s/package.json", b.CodePath)
+	packageJsonFile, err := os.OpenFile(packageJsonPath, os.O_RDWR|os.O_CREATE, 0744)
+	if err != nil {
+		return err
+	}
 
-	//b.CreateStageJS()
+	_, err = packageJsonFile.WriteString(b.FillPackageJson())
 
-	// create directory for code (./build/{deploymentId}/stage)
+	return err
+
+	// create directory for code (./build/{deploymentId}/code)
 	// 		create package.json
 	// 		create stage.js
 	// write common deployment elements ./build/common
