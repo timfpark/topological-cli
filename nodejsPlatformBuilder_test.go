@@ -7,6 +7,23 @@ import (
 	"testing"
 )
 
+const expectedWriteLocationsPackageJson = `{
+    "name": "stage-write-locations",
+    "version": "1.0.0",
+    "main": "stage.js",
+    "scripts": {
+        "start": "node stage.js",
+    },
+    "dependencies": {
+        "express": "^4.16.2",
+        "prom-client": "^10.2.2",
+        "request": "^2.83.0",
+        "topological": "^1.0.28",
+        "topological-kafka":"^1.0.4",
+        "cassandra-driver":"^3.3.0"
+    }
+}`
+
 const expectedPackageJson = `{
     "name": "stage-predict-arrivals",
     "version": "1.0.0",
@@ -125,7 +142,7 @@ func TestFillPackageJson(t *testing.T) {
 		t.Errorf("builder failed to load: %s", err)
 	}
 
-	deploymentID := "predict-arrivals"
+	deploymentID := "write-locations"
 	deployment := builder.Environment.Deployments[deploymentID]
 
 	nodeJsBuilder := NodeJsPlatformBuilder{
@@ -137,8 +154,8 @@ func TestFillPackageJson(t *testing.T) {
 
 	packageJson := nodeJsBuilder.FillPackageJson()
 
-	if packageJson != expectedPackageJson {
-		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", packageJson, expectedPackageJson)
+	if packageJson != expectedWriteLocationsPackageJson {
+		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", packageJson, expectedWriteLocationsPackageJson)
 	}
 }
 
