@@ -26,6 +26,13 @@ func (b *NodeJsPlatformBuilder) collectDependencies() (dependencies map[string]s
 		}
 	}
 
+	for _, nodeId := range b.Deployment.Nodes {
+		node := b.Topology.Nodes[nodeId]
+		for packageName, version := range node.Processor.Dependencies {
+			dependencies[packageName] = version
+		}
+	}
+
 	return dependencies
 }
 
@@ -33,7 +40,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
 	dependencies := b.collectDependencies()
 	var dependencyStrings []string
 	for packageName, version := range dependencies {
-		dependencyStrings = append(dependencyStrings, fmt.Sprintf(`"%s":"%s"`, packageName, version))
+		dependencyStrings = append(dependencyStrings, fmt.Sprintf(`        "%s":"%s"`, packageName, version))
 	}
 
 	return fmt.Sprintf(`{
@@ -48,11 +55,11 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
         "prom-client": "^10.2.2",
         "request": "^2.83.0",
         "topological": "^1.0.28",
-        %s
+%s
     }
 }`,
 		b.DeploymentID,
-		strings.Join(dependencyStrings, "\n"))
+		strings.Join(dependencyStrings, ",\n"))
 }
 
 func (b *NodeJsPlatformBuilder) consolidateDeploymentConnections() (connections map[string]bool) {
@@ -215,7 +222,7 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 
 	// create package.json
 	packageJsonPath := fmt.Sprintf("%s/package.json", b.CodePath)
-	packageJsonFile, err := os.OpenFile(packageJsonPath, os.O_RDWR|os.O_CREATE, 0744)
+	packageJsonFile, err := os.OpenFile(packageJsonPath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -225,7 +232,7 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 
 	// create stage.js
 	stagePath := fmt.Sprintf("%s/stage.js", b.CodePath)
-	stageFile, err := os.OpenFile(stagePath, os.O_RDWR|os.O_CREATE, 0744)
+	stageFile, err := os.OpenFile(stagePath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -233,7 +240,9 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	_, err = stageFile.WriteString(b.FillStage())
 	stageFile.Close()
 
-	// write common deployment elements ./build/common
+	// copy processors down into builds
+	// copy common deployment elements into ./build/common
+
 	// place deployment deps in ./build/{deployment}
 	// 		laydown deploy-stage
 	// 		laydown Dockerfile
