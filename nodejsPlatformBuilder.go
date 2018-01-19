@@ -109,11 +109,10 @@ func (b *NodeJsPlatformBuilder) FillConnections() (imports string) {
 }
 */
 
-func (b *NodeJsPlatformBuilder) FillStage() (packageJson string) {
-	// build imports
-	// build connections
+func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
+	imports := b.FillImports()
 
-	return b.FillImports()
+	return fmt.Sprintf(`%s`, imports)
 }
 
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
@@ -138,20 +137,17 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	}
 
 	_, err = packageJsonFile.WriteString(b.FillPackageJson())
+	packageJsonFile.Close()
 
 	// create stage.js
+	stagePath := fmt.Sprintf("%s/stage.js", b.CodePath)
+	stageFile, err := os.OpenFile(stagePath, os.O_RDWR|os.O_CREATE, 0744)
+	if err != nil {
+		return err
+	}
 
-	/*
-	   stagePath := fmt.Sprintf("%s/stage.json", b.CodePath)
-	   stageFile, err := os.OpenFile(stagePath, os.O_RDWR|os.O_CREATE, 0744)
-	   if err != nil {
-	       return err
-	   }
-
-	   _, err = stageFile.WriteString(b.FillStage())
-	*/
-
-	return err
+	_, err = stageFile.WriteString(b.FillStage())
+	stageFile.Close()
 
 	// write common deployment elements ./build/common
 	// place deployment deps in ./build/{deployment}
@@ -159,4 +155,7 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	// 		laydown Dockerfile
 	// 		laydown start-service
 	// 		laydown values.yaml
+
+	return err
+
 }

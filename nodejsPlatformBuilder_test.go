@@ -31,6 +31,14 @@ const expectedImports = `const { Node, Topology } = require('topological'),
     estimatedArrivalsConnectionClass = require('topological-kafka'),
     locationsConnectionClass = require('topological-kafka');`
 
+const expectedStageJs = `const { Node, Topology } = require('topological'),
+    express = require('express'),
+    app = express(),
+    server = require('http').createServer(app),
+    promClient = require('prom-client'),
+    estimatedArrivalsConnectionClass = require('topological-kafka'),
+    locationsConnectionClass = require('topological-kafka');`
+
 func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	err := builder.Load()
@@ -78,6 +86,30 @@ func TestFillImports(t *testing.T) {
 	}
 }
 
+func TestFillStage(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
+	nodeJsBuilder := NodeJsPlatformBuilder{
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
+	}
+
+	stageJsString := nodeJsBuilder.FillStage()
+
+	if stageJsString != expectedStageJs {
+		t.Errorf("stage did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsString, expectedStageJs)
+	}
+}
+
 func TestBuild(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 
@@ -114,11 +146,21 @@ func TestBuild(t *testing.T) {
 
 	packageJsonBytes, err := ioutil.ReadFile("build/predict-arrivals/code/package.json")
 	if err != nil {
-		t.Errorf("Build did not complete successfully: %s", err)
+		t.Errorf("Could not read package.json: %s", err)
 	}
 
 	// TODO: how does one really convert a []byte array to string
 	if fmt.Sprintf("%s", packageJsonBytes) != expectedPackageJson {
 		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", packageJsonBytes, expectedPackageJson)
+	}
+
+	stageJsBytes, err := ioutil.ReadFile("build/predict-arrivals/code/stage.js")
+	if err != nil {
+		t.Errorf("Could not read stage.js: %s", err)
+	}
+
+	// TODO: how does one really convert a []byte array to string
+	if fmt.Sprintf("%s", stageJsBytes) != expectedStageJs {
+		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsBytes, expectedStageJs)
 	}
 }
