@@ -51,7 +51,17 @@ func (b *Builder) LoadEnvironment() (environment *Environment, err error) {
 	return &b.Environment, nil
 }
 
-func (b *Builder) BuildDeployment(deploymentID string) (err error) {
+func (b *Builder) Load() (err error) {
+	_, err = b.LoadEnvironment()
+	if err != nil {
+		return nil
+	}
+
+	_, err = b.LoadTopology()
+	return err
+}
+
+func (b *Builder) MakeBuilder(deploymentID string) (platformBuilder PlatformBuilder, err error) {
 	var platform string
 
 	deployment := b.Environment.Deployments[deploymentID]
@@ -63,13 +73,12 @@ func (b *Builder) BuildDeployment(deploymentID string) (err error) {
 
 		if platform != "" && node.Processor.Platform != platform {
 			errString := fmt.Sprintf("mismatched platforms: %s vs %s for deployment id %s", platform, node.Processor.Platform, deploymentID)
-			return errors.New(errString)
+			return nil, errors.New(errString)
 		} else {
 			platform = node.Processor.Platform
 		}
 	}
 
-	var platformBuilder PlatformBuilder
 	switch platform {
 	case "node.js":
 		platformBuilder = &NodeJsPlatformBuilder{
@@ -80,8 +89,14 @@ func (b *Builder) BuildDeployment(deploymentID string) (err error) {
 		}
 	default:
 		errString := fmt.Sprintf("unknown platform %s", platform)
-		return errors.New(errString)
+		return nil, errors.New(errString)
 	}
+
+	return platformBuilder, nil
+}
+
+func (b *Builder) BuildDeployment(deploymentID string) (err error) {
+	platformBuilder, err := b.MakeBuilder(deploymentID)
 
 	return platformBuilder.BuildDeployment()
 }

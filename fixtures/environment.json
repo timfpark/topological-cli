@@ -14,7 +14,7 @@
                 "endpoint": "kafka-zookeeper.kafka.svc.cluster.local:2181"
             }
         },
-        "estimated-arrivals": {
+        "estimatedArrivals": {
             "platform": "node.js",
             "dependencies": {
                 "topological-kafka": "^1.0.4"

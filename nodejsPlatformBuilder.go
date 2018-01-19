@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -53,6 +54,68 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
 		strings.Join(dependencyStrings, "\n"))
 }
 
+func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
+	connections := map[string]bool{}
+
+	for _, nodeId := range b.Deployment.Nodes {
+		node := b.Topology.Nodes[nodeId]
+		for _, connectionId := range node.Inputs {
+			connections[connectionId] = true
+		}
+		for _, connectionId := range node.Outputs {
+			connections[connectionId] = true
+		}
+	}
+
+	connectionImports := []string{}
+	for connectionId, _ := range connections {
+		connection := b.Environment.Connections[connectionId]
+		for packageName, _ := range connection.Dependencies {
+			importString := fmt.Sprintf(`    %sConnectionClass = require('%s')`, connectionId, packageName)
+			connectionImports = append(connectionImports, importString)
+		}
+	}
+
+	sort.Strings(connectionImports)
+
+	return fmt.Sprintf(`const { Node, Topology } = require('topological'),
+    express = require('express'),
+    app = express(),
+    server = require('http').createServer(app),
+    promClient = require('prom-client'),
+%s;`, strings.Join(connectionImports, ",\n"))
+}
+
+/*
+func (b *NodeJsPlatformBuilder) FillConnections() (imports string) {
+	connectionImports := []string{}
+	for id, connection := range b.Environment.Connections {
+		for packageName, _ := range connection.Dependencies {
+			importString := fmt.Sprintf(`let connection%s = Connection%sClass({
+                id: "%s"
+                config: %s
+            });`, idx, idx, )
+			connectionImports = append(connectionImports, importString)
+		}
+	}
+
+	return fmt.Sprintf(`const { Node, Topology } = require('topological'),
+    express = require('express'),
+    app = express(),
+    server = require('http').createServer(app),
+    promClient = require('prom-client'),
+    %s;
+`, strings.Join(connectionImports, ",\n"))
+}
+*/
+
+func (b *NodeJsPlatformBuilder) FillStage() (packageJson string) {
+	// build imports
+	// build connections
+
+	return b.FillImports()
+}
+
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	b.DeploymentPath = fmt.Sprintf("build/%s", b.DeploymentID)
 	err = os.Mkdir(b.DeploymentPath, 0755)
@@ -60,12 +123,14 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 		return err
 	}
 
+	// create directory for code (./build/{deploymentId}/code)
 	b.CodePath = fmt.Sprintf("%s/code", b.DeploymentPath)
 	err = os.Mkdir(b.CodePath, 0755)
 	if err != nil {
 		return err
 	}
 
+	// create package.json
 	packageJsonPath := fmt.Sprintf("%s/package.json", b.CodePath)
 	packageJsonFile, err := os.OpenFile(packageJsonPath, os.O_RDWR|os.O_CREATE, 0744)
 	if err != nil {
@@ -74,11 +139,20 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 
 	_, err = packageJsonFile.WriteString(b.FillPackageJson())
 
+	// create stage.js
+
+	/*
+	   stagePath := fmt.Sprintf("%s/stage.json", b.CodePath)
+	   stageFile, err := os.OpenFile(stagePath, os.O_RDWR|os.O_CREATE, 0744)
+	   if err != nil {
+	       return err
+	   }
+
+	   _, err = stageFile.WriteString(b.FillStage())
+	*/
+
 	return err
 
-	// create directory for code (./build/{deploymentId}/code)
-	// 		create package.json
-	// 		create stage.js
 	// write common deployment elements ./build/common
 	// place deployment deps in ./build/{deployment}
 	// 		laydown deploy-stage

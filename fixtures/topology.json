@@ -21,7 +21,7 @@
             "outputs": ["estimatedArrivals"]
         },
         "notify-arrivals": {
-            "inputs": ["estimated-arrivals"],
+            "inputs": ["estimatedArrivals"],
             "processor": {
                 "platform": "node.js",
                 "file": "./processors/notifyArrivals.js"

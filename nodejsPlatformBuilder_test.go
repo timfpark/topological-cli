@@ -8,7 +8,7 @@ import (
 )
 
 const expectedPackageJson = `{
-    "name": "stage-write-locations",
+    "name": "stage-predict-arrivals",
     "version": "1.0.0",
     "main": "stage.js",
     "scripts": {
@@ -23,22 +23,58 @@ const expectedPackageJson = `{
     }
 }`
 
+const expectedImports = `const { Node, Topology } = require('topological'),
+    express = require('express'),
+    app = express(),
+    server = require('http').createServer(app),
+    promClient = require('prom-client'),
+    estimatedArrivalsConnectionClass = require('topological-kafka'),
+    locationsConnectionClass = require('topological-kafka');`
+
 func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
-	environment, err := builder.LoadEnvironment()
+	err := builder.Load()
 	if err != nil {
-		t.Errorf("LoadEnvironment did not complete successfully.")
+		t.Errorf("builder failed to load: %s", err)
 	}
 
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
 	nodeJsBuilder := NodeJsPlatformBuilder{
-		DeploymentID: "write-locations",
-		Environment:  *environment,
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
 	}
 
 	packageJson := nodeJsBuilder.FillPackageJson()
 
 	if packageJson != expectedPackageJson {
 		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", packageJson, expectedPackageJson)
+	}
+}
+
+func TestFillImports(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
+	nodeJsBuilder := NodeJsPlatformBuilder{
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
+	}
+
+	importsString := nodeJsBuilder.FillImports()
+	if importsString != expectedImports {
+		t.Errorf("imports did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", importsString, expectedImports)
 	}
 }
 
@@ -76,7 +112,7 @@ func TestBuild(t *testing.T) {
 		}
 	}
 
-	packageJsonBytes, err := ioutil.ReadFile("build/write-locations/code/package.json")
+	packageJsonBytes, err := ioutil.ReadFile("build/predict-arrivals/code/package.json")
 	if err != nil {
 		t.Errorf("Build did not complete successfully: %s", err)
 	}
