@@ -59,7 +59,7 @@ func TestLoadTopology(t *testing.T) {
 		t.Errorf("writeLocations inputs was not parsed correctly")
 	}
 
-	if topology.Nodes["writeLocations"].Processor.File != "./processors/writeLocation.js" {
+	if topology.Nodes["writeLocations"].Processor.File != "./processors/writeLocations.js" {
 		t.Errorf("writeLocations processor was not parsed correctly")
 	}
 

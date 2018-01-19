@@ -5,7 +5,7 @@
             "inputs": ["locations"],
             "processor": {
                 "platform": "node.js",
-                "file": "./processors/writeLocation.js",
+                "file": "./processors/writeLocations.js",
                 "config": {},
                 "dependencies": {
                     "cassandra-driver": "^3.3.0"

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -16,6 +17,7 @@ type NodeJsPlatformBuilder struct {
 
 	DeploymentPath string
 	CodePath       string
+	ProcessorPath  string
 }
 
 func (b *NodeJsPlatformBuilder) collectDependencies() (dependencies map[string]string) {
@@ -147,6 +149,23 @@ func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string
 	return strings.Join(instantiations, "\n\n")
 }
 
+func (b *NodeJsPlatformBuilder) CopyProcessors() (err error) {
+	for _, nodeId := range b.Deployment.Nodes {
+		node := b.Topology.Nodes[nodeId]
+
+		processorFileNameParts := strings.Split(node.Processor.File, "/")
+		processorFileName := processorFileNameParts[len(processorFileNameParts)-1]
+		processorPath := fmt.Sprintf("%s/%s", b.ProcessorPath, processorFileName)
+
+		err = CopyFile(node.Processor.File, processorPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func buildConnectionInstanceNamesFromIds(connectionIds []string) []string {
 	instances := []string{}
 	for _, connectionId := range connectionIds {
@@ -206,6 +225,25 @@ func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", imports, connections, processors, topology)
 }
 
+func CopyFile(sourcePath string, destPath string) (err error) {
+	sourceBytes, err := ioutil.ReadFile(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	destFile, err := os.OpenFile(destPath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+
+	_, err = destFile.Write(sourceBytes)
+	if err != nil {
+		return err
+	}
+
+	return destFile.Close()
+}
+
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	b.DeploymentPath = fmt.Sprintf("build/%s", b.DeploymentID)
 	err = os.Mkdir(b.DeploymentPath, 0755)
@@ -216,6 +254,13 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	// create directory for code (./build/{deploymentId}/code)
 	b.CodePath = fmt.Sprintf("%s/code", b.DeploymentPath)
 	err = os.Mkdir(b.CodePath, 0755)
+	if err != nil {
+		return err
+	}
+
+	// create directory for code (./build/{deploymentId}/code/processors)
+	b.ProcessorPath = fmt.Sprintf("%s/processors", b.CodePath)
+	err = os.Mkdir(b.ProcessorPath, 0755)
 	if err != nil {
 		return err
 	}
@@ -241,6 +286,11 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	stageFile.Close()
 
 	// copy processors down into builds
+	err = b.CopyProcessors()
+	if err != nil {
+		return err
+	}
+
 	// copy common deployment elements into ./build/common
 
 	// place deployment deps in ./build/{deployment}
