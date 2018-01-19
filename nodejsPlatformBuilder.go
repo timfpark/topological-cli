@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -86,33 +87,41 @@ func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
 %s;`, strings.Join(connectionImports, ",\n"))
 }
 
-/*
-func (b *NodeJsPlatformBuilder) FillConnections() (imports string) {
-	connectionImports := []string{}
-	for id, connection := range b.Environment.Connections {
-		for packageName, _ := range connection.Dependencies {
-			importString := fmt.Sprintf(`let connection%s = Connection%sClass({
-                id: "%s"
-                config: %s
-            });`, idx, idx, )
-			connectionImports = append(connectionImports, importString)
+func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations string) {
+	connections := map[string]bool{}
+
+	for _, nodeId := range b.Deployment.Nodes {
+		node := b.Topology.Nodes[nodeId]
+		for _, connectionId := range node.Inputs {
+			connections[connectionId] = true
+		}
+		for _, connectionId := range node.Outputs {
+			connections[connectionId] = true
 		}
 	}
 
-	return fmt.Sprintf(`const { Node, Topology } = require('topological'),
-    express = require('express'),
-    app = express(),
-    server = require('http').createServer(app),
-    promClient = require('prom-client'),
-    %s;
-`, strings.Join(connectionImports, ",\n"))
+	instantiations := []string{}
+
+	for connectionId, _ := range connections {
+		connection := b.Environment.Connections[connectionId]
+		mapJson, _ := json.Marshal(connection.Config)
+		connectionInstantiation := fmt.Sprintf(`let %sConnection = new %sConnectionClass({
+    "id": "%s",
+    "config": %s
+});`, connectionId, connectionId, connectionId, mapJson)
+		instantiations = append(instantiations, connectionInstantiation)
+	}
+
+	sort.Strings(instantiations)
+
+	return strings.Join(instantiations, "\n\n")
 }
-*/
 
 func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 	imports := b.FillImports()
+	connections := b.FillConnections()
 
-	return fmt.Sprintf(`%s`, imports)
+	return fmt.Sprintf("%s\n\n%s", imports, connections)
 }
 
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {

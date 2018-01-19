@@ -31,13 +31,33 @@ const expectedImports = `const { Node, Topology } = require('topological'),
     estimatedArrivalsConnectionClass = require('topological-kafka'),
     locationsConnectionClass = require('topological-kafka');`
 
+const expectedConnectionsString = `let estimatedArrivalsConnection = new estimatedArrivalsConnectionClass({
+    "id": "estimatedArrivals",
+    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"estimated-arrivals"}
+});
+
+let locationsConnection = new locationsConnectionClass({
+    "id": "locations",
+    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
+});`
+
 const expectedStageJs = `const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
     server = require('http').createServer(app),
     promClient = require('prom-client'),
     estimatedArrivalsConnectionClass = require('topological-kafka'),
-    locationsConnectionClass = require('topological-kafka');`
+    locationsConnectionClass = require('topological-kafka');
+
+let estimatedArrivalsConnection = new estimatedArrivalsConnectionClass({
+    "id": "estimatedArrivals",
+    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"estimated-arrivals"}
+});
+
+let locationsConnection = new locationsConnectionClass({
+    "id": "locations",
+    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
+});`
 
 func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
@@ -86,6 +106,29 @@ func TestFillImports(t *testing.T) {
 	}
 }
 
+func TestFillConnections(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
+	nodeJsBuilder := NodeJsPlatformBuilder{
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
+	}
+
+	connectionsString := nodeJsBuilder.FillConnections()
+	if connectionsString != expectedConnectionsString {
+		t.Errorf("imports did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", connectionsString, expectedConnectionsString)
+	}
+}
+
 func TestFillStage(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	err := builder.Load()
@@ -104,6 +147,8 @@ func TestFillStage(t *testing.T) {
 	}
 
 	stageJsString := nodeJsBuilder.FillStage()
+
+	expectedStageJs := fmt.Sprintf("%s\n\n%s", expectedImports, expectedConnectionsString)
 
 	if stageJsString != expectedStageJs {
 		t.Errorf("stage did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsString, expectedStageJs)
