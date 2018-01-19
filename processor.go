@@ -1,6 +1,8 @@
 package main
 
 type Processor struct {
-	File     string
-	Platform string
+	Config       map[string]string
+	File         string
+	Platform     string
+	Dependencies map[string]string
 }

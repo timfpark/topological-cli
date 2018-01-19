@@ -51,23 +51,23 @@ func TestLoadTopology(t *testing.T) {
 		t.Errorf("Nodes was not parsed correctly")
 	}
 
-	if _, ok := topology.Nodes["write-locations"]; !ok {
-		t.Errorf("write-locations Node was not parsed correctly")
+	if _, ok := topology.Nodes["writeLocations"]; !ok {
+		t.Errorf("writeLocations Node was not parsed correctly")
 	}
 
-	if len(topology.Nodes["write-locations"].Inputs) != 1 {
-		t.Errorf("write-locations inputs was not parsed correctly")
+	if len(topology.Nodes["writeLocations"].Inputs) != 1 {
+		t.Errorf("writeLocations inputs was not parsed correctly")
 	}
 
-	if topology.Nodes["write-locations"].Processor.File != "./processors/writeLocation.js" {
-		t.Errorf("write-locations processor was not parsed correctly")
+	if topology.Nodes["writeLocations"].Processor.File != "./processors/writeLocation.js" {
+		t.Errorf("writeLocations processor was not parsed correctly")
 	}
 
-	if _, ok := topology.Nodes["predict-arrivals"]; !ok {
-		t.Errorf("predict-arrivals Node was not parsed correctly")
+	if _, ok := topology.Nodes["predictArrivals"]; !ok {
+		t.Errorf("predictArrivals Node was not parsed correctly")
 	}
 
-	if len(topology.Nodes["predict-arrivals"].Outputs) != 1 {
-		t.Errorf("predict-arrivals outputs was not parsed correctly")
+	if len(topology.Nodes["predictArrivals"].Outputs) != 1 {
+		t.Errorf("predictArrivals outputs was not parsed correctly")
 	}
 }

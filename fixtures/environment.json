@@ -29,21 +29,21 @@
     "deployments": {
         "write-locations": {
             "nodes": [
-                "write-locations"
+                "writeLocations"
             ],
             "instances": 4,
             "concurrency": 30
         },
         "predict-arrivals": {
             "nodes": [
-                "predict-arrivals"
+                "predictArrivals"
             ],
             "instances": 8,
             "concurrency": 10
         },
         "notify-arrivals": {
             "nodes": [
-                "notify-arrivals"
+                "notifyArrivals"
             ],
             "instances": 8,
             "concurrency": 10

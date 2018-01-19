@@ -55,8 +55,8 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
 		strings.Join(dependencyStrings, "\n"))
 }
 
-func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
-	connections := map[string]bool{}
+func (b *NodeJsPlatformBuilder) consolidateDeploymentConnections() (connections map[string]bool) {
+	connections = map[string]bool{}
 
 	for _, nodeId := range b.Deployment.Nodes {
 		node := b.Topology.Nodes[nodeId]
@@ -67,6 +67,12 @@ func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
 			connections[connectionId] = true
 		}
 	}
+
+	return connections
+}
+
+func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
+	connections := b.consolidateDeploymentConnections()
 
 	connectionImports := []string{}
 	for connectionId, _ := range connections {
@@ -79,26 +85,25 @@ func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
 
 	sort.Strings(connectionImports)
 
+	processorImports := []string{}
+
+	for _, nodeId := range b.Deployment.Nodes {
+		node := b.Topology.Nodes[nodeId]
+		importString := fmt.Sprintf(`    %sProcessorClass = require('%s')`, nodeId, node.Processor.File)
+		processorImports = append(processorImports, importString)
+	}
+
 	return fmt.Sprintf(`const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
     server = require('http').createServer(app),
     promClient = require('prom-client'),
-%s;`, strings.Join(connectionImports, ",\n"))
+%s,
+%s;`, strings.Join(connectionImports, ",\n"), strings.Join(processorImports, ",\n"))
 }
 
 func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations string) {
-	connections := map[string]bool{}
-
-	for _, nodeId := range b.Deployment.Nodes {
-		node := b.Topology.Nodes[nodeId]
-		for _, connectionId := range node.Inputs {
-			connections[connectionId] = true
-		}
-		for _, connectionId := range node.Outputs {
-			connections[connectionId] = true
-		}
-	}
+	connections := b.consolidateDeploymentConnections()
 
 	instantiations := []string{}
 
@@ -115,6 +120,13 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 	sort.Strings(instantiations)
 
 	return strings.Join(instantiations, "\n\n")
+}
+
+func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string) {
+	for _, nodeId := range b.Deployment.Nodes {
+		_ = b.Topology.Nodes[nodeId]
+	}
+	return ""
 }
 
 func (b *NodeJsPlatformBuilder) FillStage() (stage string) {

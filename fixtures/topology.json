@@ -1,29 +1,32 @@
 {
     "name": "location-pipeline",
     "nodes": {
-        "write-locations": {
+        "writeLocations": {
             "inputs": ["locations"],
             "processor": {
                 "platform": "node.js",
                 "file": "./processors/writeLocation.js",
+                "config": {},
                 "dependencies": {
                     "cassandra-driver": "^3.3.0"
                 }
             },
             "outputs": []
         },
-        "predict-arrivals": {
+        "predictArrivals": {
             "inputs": ["locations"],
             "processor": {
                 "platform": "node.js",
+                "config": {},
                 "file": "./processors/predictArrivals.js"
             },
             "outputs": ["estimatedArrivals"]
         },
-        "notify-arrivals": {
+        "notifyArrivals": {
             "inputs": ["estimatedArrivals"],
             "processor": {
                 "platform": "node.js",
+                "config": {},
                 "file": "./processors/notifyArrivals.js"
             },
             "outputs": []
