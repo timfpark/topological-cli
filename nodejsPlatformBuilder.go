@@ -48,7 +48,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
     "version": "1.0.0",
     "main": "stage.js",
     "scripts": {
-        "start": "node stage.js",
+        "start": "node stage.js"
     },
     "dependencies": {
         "express": "^4.16.2",
