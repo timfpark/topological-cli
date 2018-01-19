@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 )
 
@@ -72,7 +73,7 @@ func TestLoadTopology(t *testing.T) {
 	}
 }
 
-func TestBuildDeployment(t *testing.T) {
+func TestBuild(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 
 	_, err := builder.LoadTopology()
@@ -85,8 +86,24 @@ func TestBuildDeployment(t *testing.T) {
 		t.Errorf("LoadEnvironment did not complete successfully.")
 	}
 
-	_, err = builder.BuildDeployment("write-locations")
+	err = builder.Build()
 	if err != nil {
-		t.Errorf("BuildDeployment did not complete successfully.")
+		t.Errorf("Build did not complete successfully: %s", err)
+	}
+
+	expectedDirectories := []string{
+		"build",
+		"build/notify-arrivals",
+		"build/notify-arrivals/code",
+		"build/write-locations",
+		"build/write-locations/code",
+		"build/predict-arrivals",
+		"build/predict-arrivals/code",
+	}
+
+	for _, directory := range expectedDirectories {
+		if _, err := os.Stat(directory); os.IsNotExist(err) {
+			t.Errorf("Build did not created expected directory: %s", directory)
+		}
 	}
 }

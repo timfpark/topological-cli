@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestBuildPackageJson(t *testing.T) {
+func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	environment, err := builder.LoadEnvironment()
 	if err != nil {
@@ -16,7 +16,7 @@ func TestBuildPackageJson(t *testing.T) {
 		Environment:  *environment,
 	}
 
-	packageJson := nodeJsBuilder.BuildPackageJson()
+	packageJson := nodeJsBuilder.FillPackageJson()
 
 	const expectedPackageJson = `{
 		"name": "stage-write-locations",

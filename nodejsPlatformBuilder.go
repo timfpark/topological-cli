@@ -13,7 +13,7 @@ type NodeJsPlatformBuilder struct {
 	Environment  Environment
 
 	DeploymentPath string
-	StagePath      string
+	CodePath       string
 }
 
 func (b *NodeJsPlatformBuilder) collectDependencies() (dependencies map[string]string) {
@@ -27,7 +27,7 @@ func (b *NodeJsPlatformBuilder) collectDependencies() (dependencies map[string]s
 	return dependencies
 }
 
-func (b *NodeJsPlatformBuilder) BuildPackageJson() (artifact string) {
+func (b *NodeJsPlatformBuilder) FillPackageJson() (artifact string) {
 	dependencies := b.collectDependencies()
 	var dependencyStrings []string
 	for packageName, version := range dependencies {
@@ -53,18 +53,20 @@ func (b *NodeJsPlatformBuilder) BuildPackageJson() (artifact string) {
 		strings.Join(dependencyStrings, "\n"))
 }
 
-func (b *NodeJsPlatformBuilder) BuildDeployment() (artifacts map[string]string, err error) {
-	artifacts = map[string]string{}
-
+func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	b.DeploymentPath = fmt.Sprintf("build/%s", b.DeploymentID)
-	os.Mkdir(b.DeploymentPath, 0755)
+	err = os.Mkdir(b.DeploymentPath, 0755)
+	if err != nil {
+		return err
+	}
 
-	b.StagePath = fmt.Sprintf("%s/stage", b.DeploymentPath)
-	os.Mkdir(b.StagePath, 0755)
+	b.CodePath = fmt.Sprintf("%s/code", b.DeploymentPath)
+	err = os.Mkdir(b.CodePath, 0755)
+	if err != nil {
+		return err
+	}
 
-	artifacts["package.json"] = b.BuildPackageJson()
-
-	return artifacts, nil
+	return nil
 
 	//b.CreateStageJS()
 

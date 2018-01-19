@@ -51,7 +51,7 @@ func (b *Builder) LoadEnvironment() (environment *Environment, err error) {
 	return &b.Environment, nil
 }
 
-func (b *Builder) BuildDeployment(deploymentID string) (artifacts map[string]string, err error) {
+func (b *Builder) BuildDeployment(deploymentID string) (err error) {
 	var platform string
 
 	deployment := b.Environment.Deployments[deploymentID]
@@ -63,7 +63,7 @@ func (b *Builder) BuildDeployment(deploymentID string) (artifacts map[string]str
 
 		if platform != "" && node.Processor.Platform != platform {
 			errString := fmt.Sprintf("mismatched platforms: %s vs %s for deployment id %s", platform, node.Processor.Platform, deploymentID)
-			return nil, errors.New(errString)
+			return errors.New(errString)
 		} else {
 			platform = node.Processor.Platform
 		}
@@ -73,13 +73,14 @@ func (b *Builder) BuildDeployment(deploymentID string) (artifacts map[string]str
 	switch platform {
 	case "node.js":
 		platformBuilder = &NodeJsPlatformBuilder{
-			Deployment:  deployment,
-			Topology:    b.Topology,
-			Environment: b.Environment,
+			DeploymentID: deploymentID,
+			Deployment:   deployment,
+			Topology:     b.Topology,
+			Environment:  b.Environment,
 		}
 	default:
 		errString := fmt.Sprintf("unknown platform %s", platform)
-		return nil, errors.New(errString)
+		return errors.New(errString)
 	}
 
 	return platformBuilder.BuildDeployment()
@@ -96,13 +97,16 @@ func (b *Builder) Build() error {
 		return err
 	}
 
+	// if it exists, remove old build
+	os.RemoveAll("build")
+
 	err = os.Mkdir("build", 0755)
 	if err != nil {
 		return err
 	}
 
 	for deploymentID := range b.Environment.Deployments {
-		_, err = b.BuildDeployment(deploymentID)
+		err = b.BuildDeployment(deploymentID)
 		if err != nil {
 			return err
 		}
