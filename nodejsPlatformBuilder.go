@@ -159,11 +159,11 @@ func (b *NodeJsPlatformBuilder) FillNodes() (nodeInstantiations string) {
 		outputConnectionInstances := buildConnectionInstanceNamesFromIds(node.Outputs)
 
 		nodeInstantiation := fmt.Sprintf(`new Node({
-    id: '%s',
-    inputs: [%s],
-    processor: %sProcessor,
-    outputs: [%s]
-})`, nodeId, strings.Join(inputConnectionInstances, ","), nodeId, strings.Join(outputConnectionInstances, ","))
+            id: '%s',
+            inputs: [%s],
+            processor: %sProcessor,
+            outputs: [%s]
+        })`, nodeId, strings.Join(inputConnectionInstances, ","), nodeId, strings.Join(outputConnectionInstances, ","))
 
 		instances = append(instances, nodeInstantiation)
 	}
@@ -171,25 +171,24 @@ func (b *NodeJsPlatformBuilder) FillNodes() (nodeInstantiations string) {
 	return strings.Join(instances, ",\n")
 }
 
-/*
-func (b *NodeJsPlatformBuilder) FillTopologies() (processorInstantiations string) {
+func (b *NodeJsPlatformBuilder) FillTopology() (topologyInstantiation string) {
+	nodesString := b.FillNodes()
 
-	`let topology = new Topology({
-        id: 'topology',
-        nodes: [
-,
-        ]
-    })`
-
+	return fmt.Sprintf(`let topology = new Topology({
+    id: 'topology',
+    nodes: [
+        %s
+    ]
+});`, nodesString)
 }
-*/
 
 func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 	imports := b.FillImports()
 	connections := b.FillConnections()
 	processors := b.FillProcessors()
+	topology := b.FillTopology()
 
-	return fmt.Sprintf("%s\n\n%s\n\n%s", imports, connections, processors)
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", imports, connections, processors, topology)
 }
 
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {

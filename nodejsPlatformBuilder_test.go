@@ -48,11 +48,23 @@ const expectedProcessorsString = `let predictArrivalsProcessor = new predictArri
 });`
 
 const expectedNodesString = `new Node({
-    id: 'predictArrivals',
-    inputs: [locationsConnection],
-    processor: predictArrivalsProcessor,
-    outputs: [estimatedArrivalsConnection]
-})`
+            id: 'predictArrivals',
+            inputs: [locationsConnection],
+            processor: predictArrivalsProcessor,
+            outputs: [estimatedArrivalsConnection]
+        })`
+
+const expectedTopologyString = `let topology = new Topology({
+    id: 'topology',
+    nodes: [
+        new Node({
+            id: 'predictArrivals',
+            inputs: [locationsConnection],
+            processor: predictArrivalsProcessor,
+            outputs: [estimatedArrivalsConnection]
+        })
+    ]
+});`
 
 const expectedStageJs = `const { Node, Topology } = require('topological'),
     express = require('express'),
@@ -76,6 +88,18 @@ let locationsConnection = new locationsConnectionClass({
 let predictArrivalsProcessor = new predictArrivalsProcessorClass({
     "id": "predictArrivals",
     "config": {}
+});
+
+let topology = new Topology({
+    id: 'topology',
+    nodes: [
+        new Node({
+            id: 'predictArrivals',
+            inputs: [locationsConnection],
+            processor: predictArrivalsProcessor,
+            outputs: [estimatedArrivalsConnection]
+        })
+    ]
 });`
 
 func TestFillPackageJson(t *testing.T) {
@@ -144,7 +168,7 @@ func TestFillConnections(t *testing.T) {
 
 	connectionsString := nodeJsBuilder.FillConnections()
 	if connectionsString != expectedConnectionsString {
-		t.Errorf("imports did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", connectionsString, expectedConnectionsString)
+		t.Errorf("connections did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", connectionsString, expectedConnectionsString)
 	}
 }
 
@@ -167,7 +191,7 @@ func TestFillProcessors(t *testing.T) {
 
 	processorsString := nodeJsBuilder.FillProcessors()
 	if processorsString != expectedProcessorsString {
-		t.Errorf("imports did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", processorsString, expectedProcessorsString)
+		t.Errorf("processors did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", processorsString, expectedProcessorsString)
 	}
 }
 
@@ -190,7 +214,30 @@ func TestFillNodes(t *testing.T) {
 
 	nodesString := nodeJsBuilder.FillNodes()
 	if nodesString != expectedNodesString {
-		t.Errorf("imports did not matchd:-->%s<-- vs. -->%s<-- did not complete successfully.", nodesString, expectedNodesString)
+		t.Errorf("nodes did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", nodesString, expectedNodesString)
+	}
+}
+
+func TestFillTopology(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
+	nodeJsBuilder := NodeJsPlatformBuilder{
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
+	}
+
+	topologyString := nodeJsBuilder.FillTopology()
+	if topologyString != expectedTopologyString {
+		t.Errorf("topology did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", topologyString, expectedTopologyString)
 	}
 }
 
