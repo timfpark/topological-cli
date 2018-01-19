@@ -322,14 +322,17 @@ func TestBuild(t *testing.T) {
 		"build/notify-arrivals/code",
 		"build/notify-arrivals/code/package.json",
 		"build/notify-arrivals/code/stage.js",
+		"build/notify-arrivals/code/processors/notifyArrivals.js",
 		"build/write-locations",
 		"build/write-locations/code",
 		"build/write-locations/code/package.json",
 		"build/write-locations/code/stage.js",
+		"build/write-locations/code/processors/writeLocations.js",
 		"build/predict-arrivals",
 		"build/predict-arrivals/code",
 		"build/predict-arrivals/code/package.json",
 		"build/predict-arrivals/code/stage.js",
+		"build/predict-arrivals/code/processors/predictArrivals.js",
 	}
 
 	for _, directory := range expectedItems {
