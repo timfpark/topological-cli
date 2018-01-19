@@ -47,6 +47,13 @@ const expectedProcessorsString = `let predictArrivalsProcessor = new predictArri
     "config": {}
 });`
 
+const expectedNodesString = `new Node({
+    id: 'predictArrivals',
+    inputs: [locationsConnection],
+    processor: predictArrivalsProcessor,
+    outputs: [estimatedArrivalsConnection]
+})`
+
 const expectedStageJs = `const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
@@ -161,6 +168,29 @@ func TestFillProcessors(t *testing.T) {
 	processorsString := nodeJsBuilder.FillProcessors()
 	if processorsString != expectedProcessorsString {
 		t.Errorf("imports did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", processorsString, expectedProcessorsString)
+	}
+}
+
+func TestFillNodes(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
+	nodeJsBuilder := NodeJsPlatformBuilder{
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
+	}
+
+	nodesString := nodeJsBuilder.FillNodes()
+	if nodesString != expectedNodesString {
+		t.Errorf("imports did not matchd:-->%s<-- vs. -->%s<-- did not complete successfully.", nodesString, expectedNodesString)
 	}
 }
 

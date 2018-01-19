@@ -127,18 +127,62 @@ func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string
 
 	for _, nodeId := range b.Deployment.Nodes {
 		node := b.Topology.Nodes[nodeId]
-		nodeConfigJson, _ := json.Marshal(node.Processor.Config)
-		nodeInstantiation := fmt.Sprintf(`let %sProcessor = new %sProcessorClass({
+		processorConfigJson, _ := json.Marshal(node.Processor.Config)
+		processorInstantiation := fmt.Sprintf(`let %sProcessor = new %sProcessorClass({
     "id": "%s",
     "config": %s
-});`, nodeId, nodeId, nodeId, nodeConfigJson)
-		instantiations = append(instantiations, nodeInstantiation)
+});`, nodeId, nodeId, nodeId, processorConfigJson)
+		instantiations = append(instantiations, processorInstantiation)
 	}
 
 	sort.Strings(instantiations)
 
 	return strings.Join(instantiations, "\n\n")
 }
+
+func buildConnectionInstanceNamesFromIds(connectionIds []string) []string {
+	instances := []string{}
+	for _, connectionId := range connectionIds {
+		instances = append(instances, fmt.Sprintf("%sConnection", connectionId))
+	}
+
+	return instances
+}
+
+func (b *NodeJsPlatformBuilder) FillNodes() (nodeInstantiations string) {
+	instances := []string{}
+
+	for _, nodeId := range b.Deployment.Nodes {
+		node := b.Topology.Nodes[nodeId]
+
+		inputConnectionInstances := buildConnectionInstanceNamesFromIds(node.Inputs)
+		outputConnectionInstances := buildConnectionInstanceNamesFromIds(node.Outputs)
+
+		nodeInstantiation := fmt.Sprintf(`new Node({
+    id: '%s',
+    inputs: [%s],
+    processor: %sProcessor,
+    outputs: [%s]
+})`, nodeId, strings.Join(inputConnectionInstances, ","), nodeId, strings.Join(outputConnectionInstances, ","))
+
+		instances = append(instances, nodeInstantiation)
+	}
+
+	return strings.Join(instances, ",\n")
+}
+
+/*
+func (b *NodeJsPlatformBuilder) FillTopologies() (processorInstantiations string) {
+
+	`let topology = new Topology({
+        id: 'topology',
+        nodes: [
+,
+        ]
+    })`
+
+}
+*/
 
 func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 	imports := b.FillImports()
