@@ -64,7 +64,15 @@ const expectedTopologyString = `let topology = new Topology({
             outputs: [estimatedArrivalsConnection]
         })
     ]
-});`
+});
+
+topology.start(err => {
+    if (err) {
+        topology.log.error("topology start failed with: " + err);
+        return process.exit(0);
+    }
+});
+`
 
 const expectedStageJs = `const { Node, Topology } = require('topological'),
     express = require('express'),
@@ -100,7 +108,15 @@ let topology = new Topology({
             outputs: [estimatedArrivalsConnection]
         })
     ]
-});`
+});
+
+topology.start(err => {
+    if (err) {
+        topology.log.error("topology start failed with: " + err);
+        return process.exit(0);
+    }
+});
+`
 
 func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
@@ -261,7 +277,7 @@ func TestFillStage(t *testing.T) {
 	stageJsString := nodeJsBuilder.FillStage()
 
 	if stageJsString != expectedStageJs {
-		t.Errorf("stage did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsString, expectedStageJs)
+		t.Errorf("stage.js did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsString, expectedStageJs)
 	}
 }
 
@@ -283,17 +299,23 @@ func TestBuild(t *testing.T) {
 		t.Errorf("Build did not complete successfully: %s", err)
 	}
 
-	expectedDirectories := []string{
+	expectedItems := []string{
 		"build",
 		"build/notify-arrivals",
 		"build/notify-arrivals/code",
+		"build/notify-arrivals/code/package.json",
+		"build/notify-arrivals/code/stage.js",
 		"build/write-locations",
 		"build/write-locations/code",
+		"build/write-locations/code/package.json",
+		"build/write-locations/code/stage.js",
 		"build/predict-arrivals",
 		"build/predict-arrivals/code",
+		"build/predict-arrivals/code/package.json",
+		"build/predict-arrivals/code/stage.js",
 	}
 
-	for _, directory := range expectedDirectories {
+	for _, directory := range expectedItems {
 		if _, err := os.Stat(directory); os.IsNotExist(err) {
 			t.Errorf("Build did not created expected directory: %s", directory)
 		}

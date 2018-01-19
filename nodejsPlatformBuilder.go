@@ -179,7 +179,15 @@ func (b *NodeJsPlatformBuilder) FillTopology() (topologyInstantiation string) {
     nodes: [
         %s
     ]
-});`, nodesString)
+});
+
+topology.start(err => {
+    if (err) {
+        topology.log.error("topology start failed with: " + err);
+        return process.exit(0);
+    }
+});
+`, nodesString)
 }
 
 func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
