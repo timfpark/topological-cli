@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 )
 
 type Builder struct {
@@ -15,6 +16,72 @@ type Builder struct {
 	Topology    Topology
 	Environment Environment
 }
+
+// DATE_TAG=`date -u +"%Y%m%dT%H%M%SZ"\`
+
+const commonDeployApp = `#!/bin/bash
+
+kubectl create namespace $SERVICE_NAME
+
+RELEASE_TAG=$CONTAINER_REPO/$SERVICE_NAME:$DATE_TAG
+docker build -t $RELEASE_TAG .
+docker push $RELEASE_TAG
+
+helm upgrade $SERVICE_NAME --namespace $SERVICE_NAME --install --set image=$RELEASE_TAG --values=./values.yaml ../common/$APP_TYPE/.
+`
+
+const deployApp = `#/bin/bash
+
+CONTAINER_REPO=%s SERVICE_NAME=%s APP_TYPE=pipeline-stage ../common/deploy-app
+`
+
+const chartYaml = `name: pipeline-stage`
+
+const deploymentYaml = `apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Values.serviceName }}
+  labels:
+    name: {{ .Values.serviceName }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: {{ .Values.serviceName }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecrets }}
+      containers:
+      - name: {{ .Values.serviceName }}
+        image: {{ .Values.image }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.servicePort }}
+          protocol: TCP
+`
+
+const serviceYaml = `apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+  labels:
+    name: {{ .Values.serviceName }}
+  name: {{ .Values.serviceName }}
+  namespace: {{ .Values.serviceName }}
+spec:
+  ports:
+  - port: {{ .Values.servicePort }}
+    protocol: TCP
+    targetPort: {{ .Values.servicePort }}
+  selector:
+    name: {{ .Values.serviceName }}
+  sessionAffinity: None
+  type: ClusterIP
+`
 
 func NewBuilder(topologyPath string, environmentPath string) *Builder {
 	return &Builder{
@@ -120,19 +187,57 @@ func (b *Builder) Build() error {
 		return err
 	}
 
+	tierDir := path.Join("build", b.Environment.Tier)
+	err = os.Mkdir(tierDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	var deployAllScript string
 	for deploymentID := range b.Environment.Deployments {
 		err = b.BuildDeployment(deploymentID)
 		if err != nil {
 			return err
 		}
+
+		deployAllScript += fmt.Sprintf("cd %s && ./deploy-app && cd ..\n", deploymentID)
 	}
 
-	return nil
-	/*
-		fmt.Printf("topology => %+v\n", b.Topology)
+	ioutil.WriteFile(path.Join(tierDir, "deploy-all"), []byte(deployAllScript), 0755)
 
-		async.eachSeries(Object.keys(this.environment.deployments), (deploymentId, deploymentCallback) => {
-			this.buildDeployment(deploymentId, deploymentCallback);
-		}, callback);
-	*/
+	// copy common deployment elements down into build
+	commonDir := path.Join(tierDir, "common")
+	err = os.Mkdir(commonDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(commonDir, "deploy-app"), []byte(deployApp), 0755)
+	if err != nil {
+		return err
+	}
+
+	helmDir := path.Join(commonDir, "pipeline-stage")
+	err = os.Mkdir(helmDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(helmDir, "Chart.yaml"), []byte(chartYaml), 0755)
+	if err != nil {
+		return err
+	}
+
+	templateDir := path.Join(helmDir, "templates")
+	err = os.Mkdir(templateDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(templateDir, "deployment.yaml"), []byte(deploymentYaml), 0644)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path.Join(templateDir, "service.yaml"), []byte(serviceYaml), 0644)
 }

@@ -317,22 +317,21 @@ func TestBuild(t *testing.T) {
 	}
 
 	expectedItems := []string{
-		"build",
-		"build/notify-arrivals",
-		"build/notify-arrivals/code",
-		"build/notify-arrivals/code/package.json",
-		"build/notify-arrivals/code/stage.js",
-		"build/notify-arrivals/code/processors/notifyArrivals.js",
-		"build/write-locations",
-		"build/write-locations/code",
-		"build/write-locations/code/package.json",
-		"build/write-locations/code/stage.js",
-		"build/write-locations/code/processors/writeLocations.js",
-		"build/predict-arrivals",
-		"build/predict-arrivals/code",
-		"build/predict-arrivals/code/package.json",
-		"build/predict-arrivals/code/stage.js",
-		"build/predict-arrivals/code/processors/predictArrivals.js",
+		"build/production/notify-arrivals",
+		"build/production/notify-arrivals/code",
+		"build/production/notify-arrivals/code/package.json",
+		"build/production/notify-arrivals/code/stage.js",
+		"build/production/notify-arrivals/code/processors/notifyArrivals.js",
+		"build/production/write-locations",
+		"build/production/write-locations/code",
+		"build/production/write-locations/code/package.json",
+		"build/production/write-locations/code/stage.js",
+		"build/production/write-locations/code/processors/writeLocations.js",
+		"build/production/predict-arrivals",
+		"build/production/predict-arrivals/code",
+		"build/production/predict-arrivals/code/package.json",
+		"build/production/predict-arrivals/code/stage.js",
+		"build/production/predict-arrivals/code/processors/predictArrivals.js",
 	}
 
 	for _, directory := range expectedItems {
@@ -341,7 +340,7 @@ func TestBuild(t *testing.T) {
 		}
 	}
 
-	packageJsonBytes, err := ioutil.ReadFile("build/predict-arrivals/code/package.json")
+	packageJsonBytes, err := ioutil.ReadFile("build/production/predict-arrivals/code/package.json")
 	if err != nil {
 		t.Errorf("Could not read package.json: %s", err)
 	}
@@ -351,7 +350,7 @@ func TestBuild(t *testing.T) {
 		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", packageJsonBytes, expectedPackageJson)
 	}
 
-	stageJsBytes, err := ioutil.ReadFile("build/predict-arrivals/code/stage.js")
+	stageJsBytes, err := ioutil.ReadFile("build/production/predict-arrivals/code/stage.js")
 	if err != nil {
 		t.Errorf("Could not read stage.js: %s", err)
 	}

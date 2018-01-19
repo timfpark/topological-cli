@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"sort"
 	"strings"
 )
@@ -245,7 +246,7 @@ func CopyFile(sourcePath string, destPath string) (err error) {
 }
 
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
-	b.DeploymentPath = fmt.Sprintf("build/%s", b.DeploymentID)
+	b.DeploymentPath = path.Join("build", b.Environment.Tier, b.DeploymentID)
 	err = os.Mkdir(b.DeploymentPath, 0755)
 	if err != nil {
 		return err
@@ -290,8 +291,6 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	if err != nil {
 		return err
 	}
-
-	// copy common deployment elements into ./build/common
 
 	// place deployment deps in ./build/{deployment}
 	// 		laydown deploy-stage
