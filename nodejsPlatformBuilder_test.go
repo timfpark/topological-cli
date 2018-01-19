@@ -42,7 +42,10 @@ let locationsConnection = new locationsConnectionClass({
     "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
 });`
 
-const expectedProcessorsString = `let`
+const expectedProcessorsString = `let predictArrivalsProcessor = new predictArrivalsProcessorClass({
+    "id": "predictArrivals",
+    "config": {}
+});`
 
 const expectedStageJs = `const { Node, Topology } = require('topological'),
     express = require('express'),
@@ -61,6 +64,11 @@ let estimatedArrivalsConnection = new estimatedArrivalsConnectionClass({
 let locationsConnection = new locationsConnectionClass({
     "id": "locations",
     "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
+});
+
+let predictArrivalsProcessor = new predictArrivalsProcessorClass({
+    "id": "predictArrivals",
+    "config": {}
 });`
 
 func TestFillPackageJson(t *testing.T) {
@@ -133,7 +141,6 @@ func TestFillConnections(t *testing.T) {
 	}
 }
 
-/*
 func TestFillProcessors(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	err := builder.Load()
@@ -156,7 +163,6 @@ func TestFillProcessors(t *testing.T) {
 		t.Errorf("imports did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", processorsString, expectedProcessorsString)
 	}
 }
-*/
 
 func TestFillStage(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
@@ -176,8 +182,6 @@ func TestFillStage(t *testing.T) {
 	}
 
 	stageJsString := nodeJsBuilder.FillStage()
-
-	expectedStageJs := fmt.Sprintf("%s\n\n%s", expectedImports, expectedConnectionsString)
 
 	if stageJsString != expectedStageJs {
 		t.Errorf("stage did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsString, expectedStageJs)
@@ -235,6 +239,6 @@ func TestBuild(t *testing.T) {
 
 	// TODO: how does one really convert a []byte array to string
 	if fmt.Sprintf("%s", stageJsBytes) != expectedStageJs {
-		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsBytes, expectedStageJs)
+		t.Errorf("stage.js did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", stageJsBytes, expectedStageJs)
 	}
 }

@@ -109,11 +109,11 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 
 	for connectionId, _ := range connections {
 		connection := b.Environment.Connections[connectionId]
-		mapJson, _ := json.Marshal(connection.Config)
+		connectionConfigJson, _ := json.Marshal(connection.Config)
 		connectionInstantiation := fmt.Sprintf(`let %sConnection = new %sConnectionClass({
     "id": "%s",
     "config": %s
-});`, connectionId, connectionId, connectionId, mapJson)
+});`, connectionId, connectionId, connectionId, connectionConfigJson)
 		instantiations = append(instantiations, connectionInstantiation)
 	}
 
@@ -123,17 +123,29 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 }
 
 func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string) {
+	instantiations := []string{}
+
 	for _, nodeId := range b.Deployment.Nodes {
-		_ = b.Topology.Nodes[nodeId]
+		node := b.Topology.Nodes[nodeId]
+		nodeConfigJson, _ := json.Marshal(node.Processor.Config)
+		nodeInstantiation := fmt.Sprintf(`let %sProcessor = new %sProcessorClass({
+    "id": "%s",
+    "config": %s
+});`, nodeId, nodeId, nodeId, nodeConfigJson)
+		instantiations = append(instantiations, nodeInstantiation)
 	}
-	return ""
+
+	sort.Strings(instantiations)
+
+	return strings.Join(instantiations, "\n\n")
 }
 
 func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 	imports := b.FillImports()
 	connections := b.FillConnections()
+	processors := b.FillProcessors()
 
-	return fmt.Sprintf("%s\n\n%s", imports, connections)
+	return fmt.Sprintf("%s\n\n%s\n\n%s", imports, connections, processors)
 }
 
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
