@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"testing"
 )
 
@@ -70,27 +69,5 @@ func TestLoadTopology(t *testing.T) {
 
 	if len(topology.Nodes["predictArrivals"].Outputs) != 1 {
 		t.Errorf("predictArrivals outputs was not parsed correctly")
-	}
-}
-
-func TestCommonFiles(t *testing.T) {
-
-	expectedItems := []string{
-		"build",
-		"build/production",
-		"build/production/deploy-all",
-		"build/production/common",
-		"build/production/common/deploy-stage",
-		"build/production/common/pipeline-stage",
-		"build/production/common/pipeline-stage/Chart.yaml",
-		"build/production/common/pipeline-stage/templates",
-		"build/production/common/pipeline-stage/templates/deployment.yaml",
-		"build/production/common/pipeline-stage/templates/service.yaml",
-	}
-
-	for _, directory := range expectedItems {
-		if _, err := os.Stat(directory); os.IsNotExist(err) {
-			t.Errorf("Build did not created expected directory: %s", directory)
-		}
 	}
 }

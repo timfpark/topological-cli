@@ -174,15 +174,14 @@ func (b *Builder) Build() error {
 		return err
 	}
 
-	// if it exists, remove old build
-	os.RemoveAll("build")
-
-	err = os.Mkdir("build", 0755)
-	if err != nil {
-		return err
-	}
+	// create build directory if it doesn't exist
+	os.Mkdir("build", 0755)
 
 	tierDir := path.Join("build", b.Environment.Tier)
+
+	// if it exists, remove old build for this tier
+	os.RemoveAll(tierDir)
+
 	err = os.Mkdir(tierDir, 0755)
 	if err != nil {
 		return err

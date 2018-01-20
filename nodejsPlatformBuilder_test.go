@@ -317,6 +317,16 @@ func TestBuild(t *testing.T) {
 	}
 
 	expectedItems := []string{
+		"build",
+		"build/production",
+		"build/production/deploy-all",
+		"build/production/common",
+		"build/production/common/deploy-stage",
+		"build/production/common/pipeline-stage",
+		"build/production/common/pipeline-stage/Chart.yaml",
+		"build/production/common/pipeline-stage/templates",
+		"build/production/common/pipeline-stage/templates/deployment.yaml",
+		"build/production/common/pipeline-stage/templates/service.yaml",
 		"build/production/notify-arrivals",
 		"build/production/notify-arrivals/deploy-stage",
 		"build/production/notify-arrivals/Dockerfile",
