@@ -19,8 +19,8 @@ const expectedWriteLocationsPackageJson = `{
         "prom-client": "^10.2.2",
         "request": "^2.83.0",
         "topological": "^1.0.28",
-        "topological-kafka":"^1.0.4",
-        "cassandra-driver":"^3.3.0"
+        "cassandra-driver":"^3.3.0",
+        "topological-kafka":"^1.0.4"
     }
 }`
 
@@ -318,16 +318,25 @@ func TestBuild(t *testing.T) {
 
 	expectedItems := []string{
 		"build/production/notify-arrivals",
+		"build/production/notify-arrivals/deploy-stage",
+		"build/production/notify-arrivals/Dockerfile",
+		"build/production/notify-arrivals/start-stage",
 		"build/production/notify-arrivals/code",
 		"build/production/notify-arrivals/code/package.json",
 		"build/production/notify-arrivals/code/stage.js",
 		"build/production/notify-arrivals/code/processors/notifyArrivals.js",
 		"build/production/write-locations",
+		"build/production/write-locations/deploy-stage",
+		"build/production/write-locations/Dockerfile",
+		"build/production/write-locations/start-stage",
 		"build/production/write-locations/code",
 		"build/production/write-locations/code/package.json",
 		"build/production/write-locations/code/stage.js",
 		"build/production/write-locations/code/processors/writeLocations.js",
 		"build/production/predict-arrivals",
+		"build/production/predict-arrivals/deploy-stage",
+		"build/production/predict-arrivals/Dockerfile",
+		"build/production/predict-arrivals/start-stage",
 		"build/production/predict-arrivals/code",
 		"build/production/predict-arrivals/code/package.json",
 		"build/production/predict-arrivals/code/stage.js",

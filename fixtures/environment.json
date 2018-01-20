@@ -2,6 +2,7 @@
     "target": "kubernetes",
     "tier": "production",
     "namespace": "data-pipeline",
+    "containerRepo": "tpark.azurecr.io/tpark",
     "connections": {
         "locations": {
             "platform": "node.js",

@@ -19,7 +19,7 @@ type Builder struct {
 
 // DATE_TAG=`date -u +"%Y%m%dT%H%M%SZ"\`
 
-const commonDeployApp = `#!/bin/bash
+const commonDeployStage = `#!/bin/bash
 
 kubectl create namespace $SERVICE_NAME
 
@@ -28,11 +28,6 @@ docker build -t $RELEASE_TAG .
 docker push $RELEASE_TAG
 
 helm upgrade $SERVICE_NAME --namespace $SERVICE_NAME --install --set image=$RELEASE_TAG --values=./values.yaml ../common/$APP_TYPE/.
-`
-
-const deployApp = `#/bin/bash
-
-CONTAINER_REPO=%s SERVICE_NAME=%s APP_TYPE=pipeline-stage ../common/deploy-app
 `
 
 const chartYaml = `name: pipeline-stage`
@@ -200,7 +195,7 @@ func (b *Builder) Build() error {
 			return err
 		}
 
-		deployAllScript += fmt.Sprintf("cd %s && ./deploy-app && cd ..\n", deploymentID)
+		deployAllScript += fmt.Sprintf("cd %s && ./deploy-stage && cd ..\n", deploymentID)
 	}
 
 	ioutil.WriteFile(path.Join(tierDir, "deploy-all"), []byte(deployAllScript), 0755)
@@ -212,7 +207,7 @@ func (b *Builder) Build() error {
 		return err
 	}
 
-	err = ioutil.WriteFile(path.Join(commonDir, "deploy-app"), []byte(deployApp), 0755)
+	err = ioutil.WriteFile(path.Join(commonDir, "deploy-stage"), []byte(commonDeployStage), 0755)
 	if err != nil {
 		return err
 	}

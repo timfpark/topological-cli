@@ -80,7 +80,7 @@ func TestCommonFiles(t *testing.T) {
 		"build/production",
 		"build/production/deploy-all",
 		"build/production/common",
-		"build/production/common/deploy-app",
+		"build/production/common/deploy-stage",
 		"build/production/common/pipeline-stage",
 		"build/production/common/pipeline-stage/Chart.yaml",
 		"build/production/common/pipeline-stage/templates",

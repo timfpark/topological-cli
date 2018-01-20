@@ -21,6 +21,31 @@ type NodeJsPlatformBuilder struct {
 	ProcessorPath  string
 }
 
+const deployStageTemplate = `#/bin/bash
+
+CONTAINER_REPO=%s SERVICE_NAME=%s APP_TYPE=pipeline-stage ../common/deploy-stage
+`
+
+const dockerFile = `FROM node:boron
+
+WORKDIR /code
+
+COPY code/. .
+RUN npm install
+COPY ./start-stage .
+
+EXPOSE 80
+
+CMD [ "./start-stage" ]
+`
+
+const startStage = `#!/bin/bash
+
+export PORT=80
+
+npm start
+`
+
 func (b *NodeJsPlatformBuilder) collectDependencies() (dependencies map[string]string) {
 	dependencies = map[string]string{}
 	for _, connection := range b.Environment.Connections {
@@ -45,6 +70,8 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
 	for packageName, version := range dependencies {
 		dependencyStrings = append(dependencyStrings, fmt.Sprintf(`        "%s":"%s"`, packageName, version))
 	}
+
+	sort.Strings(dependencyStrings)
 
 	return fmt.Sprintf(`{
     "name": "stage-%s",
@@ -232,17 +259,7 @@ func CopyFile(sourcePath string, destPath string) (err error) {
 		return err
 	}
 
-	destFile, err := os.OpenFile(destPath, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-
-	_, err = destFile.Write(sourceBytes)
-	if err != nil {
-		return err
-	}
-
-	return destFile.Close()
+	return ioutil.WriteFile(destPath, sourceBytes, 0644)
 }
 
 func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
@@ -252,39 +269,31 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 		return err
 	}
 
+	// write deploy-stage
+	deployStage := fmt.Sprintf(deployStageTemplate, b.Environment.ContainerRepo, b.DeploymentID)
+	ioutil.WriteFile(path.Join(b.DeploymentPath, "deploy-stage"), []byte(deployStage), 0755)
+	ioutil.WriteFile(path.Join(b.DeploymentPath, "Dockerfile"), []byte(dockerFile), 0644)
+	ioutil.WriteFile(path.Join(b.DeploymentPath, "start-stage"), []byte(startStage), 0644)
+
 	// create directory for code (./build/{deploymentId}/code)
-	b.CodePath = fmt.Sprintf("%s/code", b.DeploymentPath)
+	b.CodePath = path.Join(b.DeploymentPath, "code")
 	err = os.Mkdir(b.CodePath, 0755)
 	if err != nil {
 		return err
 	}
 
-	// create directory for code (./build/{deploymentId}/code/processors)
-	b.ProcessorPath = fmt.Sprintf("%s/processors", b.CodePath)
+	// create directoatry for code (./build/{deploymentId}/code/processors)
+	b.ProcessorPath = path.Join(b.CodePath, "processors")
 	err = os.Mkdir(b.ProcessorPath, 0755)
 	if err != nil {
 		return err
 	}
 
 	// create package.json
-	packageJsonPath := fmt.Sprintf("%s/package.json", b.CodePath)
-	packageJsonFile, err := os.OpenFile(packageJsonPath, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-
-	_, err = packageJsonFile.WriteString(b.FillPackageJson())
-	packageJsonFile.Close()
+	ioutil.WriteFile(path.Join(b.CodePath, "package.json"), []byte(b.FillPackageJson()), 0644)
 
 	// create stage.js
-	stagePath := fmt.Sprintf("%s/stage.js", b.CodePath)
-	stageFile, err := os.OpenFile(stagePath, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-
-	_, err = stageFile.WriteString(b.FillStage())
-	stageFile.Close()
+	ioutil.WriteFile(path.Join(b.CodePath, "stage.js"), []byte(b.FillStage()), 0644)
 
 	// copy processors down into builds
 	err = b.CopyProcessors()
@@ -299,5 +308,4 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	// 		laydown values.yaml
 
 	return err
-
 }
