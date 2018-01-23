@@ -18,7 +18,7 @@ const expectedWriteLocationsPackageJson = `{
         "express": "^4.16.2",
         "prom-client": "^10.2.2",
         "request": "^2.83.0",
-        "topological": "^1.0.28",
+        "topological": "^1.0.29",
         "cassandra-driver":"^3.3.0",
         "topological-kafka":"^1.0.4"
     }
@@ -35,7 +35,7 @@ const expectedPackageJson = `{
         "express": "^4.16.2",
         "prom-client": "^10.2.2",
         "request": "^2.83.0",
-        "topological": "^1.0.28",
+        "topological": "^1.0.29",
         "topological-kafka":"^1.0.4"
     }
 }`
@@ -100,6 +100,8 @@ const expectedStageJs = `const { Node, Topology } = require('topological'),
     locationsConnectionClass = require('topological-kafka'),
     predictArrivalsProcessorClass = require('./processors/predictArrivals.js');
 
+// CONNECTIONS =============================================================
+
 let estimatedArrivalsConnection = new estimatedArrivalsConnectionClass({
     "id": "estimatedArrivals",
     "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"estimated-arrivals"}
@@ -110,10 +112,14 @@ let locationsConnection = new locationsConnectionClass({
     "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
 });
 
+// PROCESSORS ==============================================================
+
 let predictArrivalsProcessor = new predictArrivalsProcessorClass({
     "id": "predictArrivals",
     "config": {}
 });
+
+// TOPOLOGY ================================================================
 
 let topology = new Topology({
     id: 'topology',
