@@ -146,7 +146,13 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 
 	for connectionId, _ := range connections {
 		connection := b.Environment.Connections[connectionId]
-		connectionConfigJson, _ := json.Marshal(connection.Config)
+		var connectionConfigJson string
+		if len(connection.Config) > 0 {
+			connectionConfigJsonBytes, _ := json.Marshal(connection.Config)
+			connectionConfigJson = string(connectionConfigJsonBytes)
+		} else {
+			connectionConfigJson = "{}"
+		}
 		connectionInstantiation := fmt.Sprintf(`let %sConnection = new %sConnectionClass({
     "id": "%s",
     "config": %s
@@ -164,7 +170,13 @@ func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string
 
 	for _, nodeId := range b.Deployment.Nodes {
 		node := b.Topology.Nodes[nodeId]
-		processorConfigJson, _ := json.Marshal(node.Processor.Config)
+		var processorConfigJson string
+		if len(node.Processor.Config) > 0 {
+			processorConfigJsonBytes, _ := json.Marshal(node.Processor.Config)
+			processorConfigJson = string(processorConfigJsonBytes)
+		} else {
+			processorConfigJson = "{}"
+		}
 		processorInstantiation := fmt.Sprintf(`let %sProcessor = new %sProcessorClass({
     "id": "%s",
     "config": %s
