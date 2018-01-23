@@ -23,6 +23,8 @@ const commonDeployStage = `#!/bin/bash
 
 kubectl create namespace $SERVICE_NAME
 
+DATE_TAG=` + "`" + `date -u +"%Y%m%dT%H%M%SZ"` + "`" + `
+
 RELEASE_TAG=$CONTAINER_REPO/$SERVICE_NAME:$DATE_TAG
 docker build -t $RELEASE_TAG .
 docker push $RELEASE_TAG
