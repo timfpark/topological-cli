@@ -2,6 +2,6 @@ package main
 
 type Node struct {
 	Inputs    []string
-	Processor Processor
+	Processor ProcessorSpec
 	Outputs   []string
 }

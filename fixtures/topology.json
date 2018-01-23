@@ -6,7 +6,6 @@
             "processor": {
                 "platform": "node.js",
                 "file": "./processors/writeLocations.js",
-                "config": {},
                 "dependencies": {
                     "cassandra-driver": "^3.3.0"
                 }
@@ -17,7 +16,6 @@
             "inputs": ["locations"],
             "processor": {
                 "platform": "node.js",
-                "config": {},
                 "file": "./processors/predictArrivals.js"
             },
             "outputs": ["estimatedArrivals"]
@@ -26,7 +24,6 @@
             "inputs": ["estimatedArrivals"],
             "processor": {
                 "platform": "node.js",
-                "config": {},
                 "file": "./processors/notifyArrivals.js"
             },
             "outputs": []

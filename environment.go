@@ -6,5 +6,6 @@ type Environment struct {
 	Namespace     string
 	ContainerRepo string
 	Connections   map[string]Connection
+	Processors    map[string]ProcessorEnv
 	Deployments   map[string]Deployment
 }

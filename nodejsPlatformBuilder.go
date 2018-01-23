@@ -84,7 +84,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
         "express": "^4.16.2",
         "prom-client": "^10.2.2",
         "request": "^2.83.0",
-        "topological": "^1.0.28",
+        "topological": "^1.0.29",
 %s
     }
 }`,
@@ -169,10 +169,10 @@ func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string
 	instantiations := []string{}
 
 	for _, nodeId := range b.Deployment.Nodes {
-		node := b.Topology.Nodes[nodeId]
+		processorConfig := b.Environment.Processors[nodeId].Config
 		var processorConfigJson string
-		if len(node.Processor.Config) > 0 {
-			processorConfigJsonBytes, _ := json.Marshal(node.Processor.Config)
+		if len(processorConfig) > 0 {
+			processorConfigJsonBytes, _ := json.Marshal(processorConfig)
 			processorConfigJson = string(processorConfigJsonBytes)
 		} else {
 			processorConfigJson = "{}"
@@ -262,7 +262,19 @@ func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 	processors := b.FillProcessors()
 	topology := b.FillTopology()
 
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", imports, connections, processors, topology)
+	return fmt.Sprintf(`%s
+
+// CONNECTIONS =============================================================
+
+%s
+
+// PROCESSORS ==============================================================
+
+%s
+
+// TOPOLOGY ================================================================
+
+%s`, imports, connections, processors, topology)
 }
 
 func CopyFile(sourcePath string, destPath string) (err error) {

@@ -27,6 +27,13 @@
             }
         }
     },
+    "processors": {
+        "writeLocations": {
+            "config": {
+                "cassandraEndpoints": "[\"localhost\"]"
+            }
+        }
+    },
     "deployments": {
         "write-locations": {
             "nodes": [
