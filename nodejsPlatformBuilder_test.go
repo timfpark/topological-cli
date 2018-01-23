@@ -141,6 +141,14 @@ topology.start(err => {
 });
 `
 
+const expectedValuesYamlString = `serviceName: "predict-arrivals"
+servicePort: 80
+replicas: 2
+imagePullPolicy: "Always"
+imagePullSecrets: acr-tpark
+cpu: "250m"
+memory: "250Mi"`
+
 func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	err := builder.Load()
@@ -304,6 +312,30 @@ func TestFillStage(t *testing.T) {
 	}
 }
 
+func TestFillValuesYaml(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	deployment := builder.Environment.Deployments[deploymentID]
+
+	nodeJsBuilder := NodeJsPlatformBuilder{
+		DeploymentID: deploymentID,
+		Deployment:   deployment,
+		Topology:     builder.Topology,
+		Environment:  builder.Environment,
+	}
+
+	valuesYamlString := nodeJsBuilder.FillValuesYaml()
+
+	if valuesYamlString != expectedValuesYamlString {
+		t.Errorf("stage.js did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", valuesYamlString, expectedValuesYamlString)
+	}
+}
+
 func TestBuild(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 
@@ -337,6 +369,7 @@ func TestBuild(t *testing.T) {
 		"build/production/notify-arrivals/deploy-stage",
 		"build/production/notify-arrivals/Dockerfile",
 		"build/production/notify-arrivals/start-stage",
+		"build/production/notify-arrivals/values.yaml",
 		"build/production/notify-arrivals/code",
 		"build/production/notify-arrivals/code/package.json",
 		"build/production/notify-arrivals/code/stage.js",
@@ -345,6 +378,7 @@ func TestBuild(t *testing.T) {
 		"build/production/write-locations/deploy-stage",
 		"build/production/write-locations/Dockerfile",
 		"build/production/write-locations/start-stage",
+		"build/production/write-locations/values.yaml",
 		"build/production/write-locations/code",
 		"build/production/write-locations/code/package.json",
 		"build/production/write-locations/code/stage.js",
@@ -353,6 +387,7 @@ func TestBuild(t *testing.T) {
 		"build/production/predict-arrivals/deploy-stage",
 		"build/production/predict-arrivals/Dockerfile",
 		"build/production/predict-arrivals/start-stage",
+		"build/production/predict-arrivals/values.yaml",
 		"build/production/predict-arrivals/code",
 		"build/production/predict-arrivals/code/package.json",
 		"build/production/predict-arrivals/code/stage.js",

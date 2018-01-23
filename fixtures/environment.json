@@ -3,6 +3,7 @@
     "tier": "production",
     "namespace": "data-pipeline",
     "containerRepo": "tpark.azurecr.io/tpark",
+    "pullSecret": "acr-tpark",
     "connections": {
         "locations": {
             "platform": "node.js",
@@ -39,21 +40,30 @@
             "nodes": [
                 "writeLocations"
             ],
-            "instances": 4,
+            "replicas": {
+                "min": 2,
+                "max": 4
+            },
             "concurrency": 30
         },
         "predict-arrivals": {
             "nodes": [
                 "predictArrivals"
             ],
-            "instances": 8,
+            "replicas": {
+                "min": 2,
+                "max": 4
+            },
             "concurrency": 10
         },
         "notify-arrivals": {
             "nodes": [
                 "notifyArrivals"
             ],
-            "instances": 8,
+            "replicas": {
+                "min": 2,
+                "max": 4
+            },
             "concurrency": 10
         }
     }

@@ -277,6 +277,26 @@ func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 %s`, imports, connections, processors, topology)
 }
 
+func (b *NodeJsPlatformBuilder) FillValuesYaml() (valuesYaml string) {
+	CPU := "250m"
+	if b.Deployment.Replicas.CPU != "" {
+		CPU = b.Deployment.Replicas.CPU
+	}
+
+	Memory := "250Mi"
+	if b.Deployment.Replicas.Memory != "" {
+		Memory = b.Deployment.Replicas.Memory
+	}
+
+	return fmt.Sprintf(`serviceName: "%s"
+servicePort: 80
+replicas: %d
+imagePullPolicy: "Always"
+imagePullSecrets: %s
+cpu: "%s"
+memory: "%s"`, b.DeploymentID, b.Deployment.Replicas.Min, b.Environment.PullSecret, CPU, Memory)
+}
+
 func CopyFile(sourcePath string, destPath string) (err error) {
 	sourceBytes, err := ioutil.ReadFile(sourcePath)
 	if err != nil {
@@ -293,11 +313,11 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 		return err
 	}
 
-	// write deploy-stage
 	deployStage := fmt.Sprintf(deployStageTemplate, b.Environment.ContainerRepo, b.DeploymentID)
 	ioutil.WriteFile(path.Join(b.DeploymentPath, "deploy-stage"), []byte(deployStage), 0755)
 	ioutil.WriteFile(path.Join(b.DeploymentPath, "Dockerfile"), []byte(dockerFile), 0644)
-	ioutil.WriteFile(path.Join(b.DeploymentPath, "start-stage"), []byte(startStage), 0644)
+	ioutil.WriteFile(path.Join(b.DeploymentPath, "start-stage"), []byte(startStage), 0755)
+	ioutil.WriteFile(path.Join(b.DeploymentPath, "values.yaml"), []byte(b.FillValuesYaml()), 0644)
 
 	// create directory for code (./build/{deploymentId}/code)
 	b.CodePath = path.Join(b.DeploymentPath, "code")
@@ -324,12 +344,6 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	if err != nil {
 		return err
 	}
-
-	// place deployment deps in ./build/{deployment}
-	// 		laydown deploy-stage
-	// 		laydown Dockerfile
-	// 		laydown start-service
-	// 		laydown values.yaml
 
 	return err
 }

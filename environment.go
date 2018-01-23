@@ -5,6 +5,7 @@ type Environment struct {
 	Tier          string
 	Namespace     string
 	ContainerRepo string
+	PullSecret    string
 	Connections   map[string]Connection
 	Processors    map[string]ProcessorEnv
 	Deployments   map[string]Deployment
