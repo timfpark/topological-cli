@@ -93,6 +93,7 @@ func (b *Builder) LoadTopology() (topology *Topology, err error) {
 
 	err = json.Unmarshal(topologyContents, &b.Topology)
 	if err != nil {
+		err = errors.New(fmt.Sprintf("Topology failed to unmarshal: %s", err))
 		return nil, err
 	}
 
@@ -107,6 +108,7 @@ func (b *Builder) LoadEnvironment() (environment *Environment, err error) {
 
 	err = json.Unmarshal(environmentContents, &b.Environment)
 	if err != nil {
+		err = errors.New(fmt.Sprintf("Environment failed to unmarshal: %s", err))
 		return nil, err
 	}
 
