@@ -135,7 +135,12 @@ func (b *Builder) MakeBuilder(deploymentID string) (platformBuilder PlatformBuil
 	// check to make sure platform is the same across the nodes of the deployment
 	for nodeIdx, _ := range deployment.Nodes {
 		nodeId := deployment.Nodes[nodeIdx]
-		node := b.Topology.Nodes[nodeId]
+		node, nodeExists := b.Topology.Nodes[nodeId]
+
+		if !nodeExists {
+			errString := fmt.Sprintf("no node named %s as found in deployment %s", nodeId, deploymentID)
+			return nil, errors.New(errString)
+		}
 
 		if platform != "" && node.Processor.Platform != platform {
 			errString := fmt.Sprintf("mismatched platforms: %s vs %s for deployment id %s", platform, node.Processor.Platform, deploymentID)
@@ -163,6 +168,10 @@ func (b *Builder) MakeBuilder(deploymentID string) (platformBuilder PlatformBuil
 
 func (b *Builder) BuildDeployment(deploymentID string) (err error) {
 	platformBuilder, err := b.MakeBuilder(deploymentID)
+
+	if err != nil {
+		return err
+	}
 
 	return platformBuilder.BuildDeployment()
 }
