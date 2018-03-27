@@ -82,9 +82,10 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
     },
     "dependencies": {
         "express": "^4.16.2",
-        "prom-client": "^10.2.2",
+        "morgan": "^1.9.0",
+        "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.29",
+        "topological": "^1.0.30",
 %s
     }
 }`,
@@ -133,6 +134,7 @@ func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
 	return fmt.Sprintf(`const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
+    morgan = require('morgan'),
     server = require('http').createServer(app),
     promClient = require('prom-client'),
 %s,
@@ -282,6 +284,8 @@ app.get("/metrics", (req, res) => {
     res.set("Content-Type", promClient.register.contentType);
     res.end(promClient.register.metrics());
 });
+
+app.use(morgan("combined"));
 
 server.listen(process.env.PORT);
 topology.log.info("listening on port: " + process.env.PORT);
