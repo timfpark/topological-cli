@@ -49,8 +49,6 @@ spec:
       labels:
         name: {{ .Values.serviceName }}
     spec:
-      imagePullSecrets:
-        - name: {{ .Values.imagePullSecrets }}
       containers:
       - name: {{ .Values.serviceName }}
         image: {{ .Values.image }}
@@ -68,7 +66,7 @@ metadata:
   labels:
     name: {{ .Values.serviceName }}
   name: {{ .Values.serviceName }}
-  namespace: {{ .Values.serviceName }}
+  namespace: {{ .Values.serviceNamespace }}
 spec:
   ports:
   - port: {{ .Values.servicePort }}

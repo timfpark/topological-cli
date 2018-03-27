@@ -274,7 +274,20 @@ func (b *NodeJsPlatformBuilder) FillStage() (stage string) {
 
 // TOPOLOGY ================================================================
 
-%s`, imports, connections, processors, topology)
+%s
+
+// METRICS ================================================================
+
+app.get("/metrics", (req, res) => {
+    res.set("Content-Type", promClient.register.contentType);
+    res.end(promClient.register.metrics());
+});
+
+server.listen(process.env.PORT);
+topology.log.info("listening on port: " + process.env.PORT);
+
+promClient.collectDefaultMetrics();
+`, imports, connections, processors, topology)
 }
 
 func (b *NodeJsPlatformBuilder) FillValuesYaml() (valuesYaml string) {
@@ -289,12 +302,13 @@ func (b *NodeJsPlatformBuilder) FillValuesYaml() (valuesYaml string) {
 	}
 
 	return fmt.Sprintf(`serviceName: "%s"
+serviceNamespace: "%s"
 servicePort: 80
 replicas: %d
 imagePullPolicy: "Always"
 imagePullSecrets: %s
 cpu: "%s"
-memory: "%s"`, b.DeploymentID, b.Deployment.Replicas.Min, b.Environment.PullSecret, CPU, Memory)
+memory: "%s"`, b.DeploymentID, b.Environment.Namespace, b.Deployment.Replicas.Min, b.Environment.PullSecret, CPU, Memory)
 }
 
 func CopyFile(sourcePath string, destPath string) (err error) {
