@@ -29,7 +29,7 @@ RELEASE_TAG=$CONTAINER_REPO/$SERVICE_NAME:$DATE_TAG
 docker build -t $RELEASE_TAG .
 docker push $RELEASE_TAG
 
-helm upgrade $SERVICE_NAME --namespace $SERVICE_NAME --install --set image=$RELEASE_TAG --values=./values.yaml ../common/$APP_TYPE/.
+helm upgrade $SERVICE_NAME --namespace $SERVICE_NAMESPACE --install --set image=$RELEASE_TAG --values=./values.yaml ../common/$APP_TYPE/.
 `
 
 const chartYaml = `name: pipeline-stage`

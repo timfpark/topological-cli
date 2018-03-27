@@ -23,10 +23,10 @@ type NodeJsPlatformBuilder struct {
 
 const deployStageTemplate = `#/bin/bash
 
-CONTAINER_REPO=%s SERVICE_NAME=%s APP_TYPE=pipeline-stage ../common/deploy-stage
+CONTAINER_REPO=%s SERVICE_NAME=%s SERVICE_NAMESPACE=%s APP_TYPE=pipeline-stage ../common/deploy-stage
 `
 
-const dockerFile = `FROM node:boron
+const dockerFile = `FROM node:carbon
 
 WORKDIR /code
 
@@ -313,7 +313,7 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 		return err
 	}
 
-	deployStage := fmt.Sprintf(deployStageTemplate, b.Environment.ContainerRepo, b.DeploymentID)
+	deployStage := fmt.Sprintf(deployStageTemplate, b.Environment.ContainerRepo, b.DeploymentID, b.Environment.Namespace)
 	ioutil.WriteFile(path.Join(b.DeploymentPath, "deploy-stage"), []byte(deployStage), 0755)
 	ioutil.WriteFile(path.Join(b.DeploymentPath, "Dockerfile"), []byte(dockerFile), 0644)
 	ioutil.WriteFile(path.Join(b.DeploymentPath, "start-stage"), []byte(startStage), 0755)
