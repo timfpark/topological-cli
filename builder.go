@@ -21,7 +21,7 @@ type Builder struct {
 
 const commonDeployStage = `#!/bin/bash
 
-kubectl create namespace $SERVICE_NAME
+kubectl create namespace $SERVICE_NAMESPACE
 
 DATE_TAG=` + "`" + `date -u +"%Y%m%dT%H%M%SZ"` + "`" + `
 
@@ -49,6 +49,8 @@ spec:
       labels:
         name: {{ .Values.serviceName }}
     spec:
+      imagePullSecrets:
+      - name: {{ .Values.imagePullSecrets }}
       containers:
       - name: {{ .Values.serviceName }}
         image: {{ .Values.image }}
