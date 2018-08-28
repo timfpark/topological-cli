@@ -13,6 +13,7 @@ memoryRequest: '256Mi'
 memoryLimit: '512Mi'
 replicas: 1
 serviceName: 'predict-arrivals'
+serviceNamespace: 'data-pipeline'
 servicePort: 80`
 
 func TestLoadEnvironment(t *testing.T) {

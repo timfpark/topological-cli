@@ -159,7 +159,6 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 }
 
 func (b *NodeJsPlatformBuilder) buildConfig(config map[string]interface{}) (configJSON string) {
-
 	configKeys := make([]string, 0, len(config))
 	for k := range config {
 		configKeys = append(configKeys, k)
@@ -169,8 +168,8 @@ func (b *NodeJsPlatformBuilder) buildConfig(config map[string]interface{}) (conf
 	configEntries := []string{}
 
 	for _, key := range configKeys {
-		secret := config[key]
-		envVarName := strings.ToUpper(strings.Replace(secret.(string), "-", "_", -1))
+		secret := config[key].(string)
+		envVarName := strings.ToUpper(strings.Replace(secret, "-", "_", -1))
 		configEntries = append(configEntries, fmt.Sprintf(`"%s": process.env.%s`, key, envVarName))
 	}
 

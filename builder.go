@@ -95,6 +95,7 @@ memoryRequest: '%s'
 memoryLimit: '%s'
 replicas: %d
 serviceName: '%s'
+serviceNamespace: '%s'
 servicePort: 80`
 
 func NewBuilder(topologyPath string, environmentPath string) *Builder {
@@ -243,7 +244,7 @@ func (b *Builder) buildDeploymentSecretsEnvVarBlock(deploymentID string) (envVar
 
 func (b *Builder) FillValuesYAML(deploymentID string) (valuesYAML string) {
 	deployment := b.Environment.Deployments[deploymentID]
-	return fmt.Sprintf(valuesYAMLTemplate, deployment.CPU.Request, deployment.CPU.Limit, b.Environment.PullSecret, deployment.LogSeverity, deployment.Memory.Request, deployment.Memory.Limit, deployment.Replicas.Min, deploymentID)
+	return fmt.Sprintf(valuesYAMLTemplate, deployment.CPU.Request, deployment.CPU.Limit, b.Environment.PullSecret, deployment.LogSeverity, deployment.Memory.Request, deployment.Memory.Limit, deployment.Replicas.Min, deploymentID, b.Environment.Namespace)
 }
 
 func (b *Builder) BuildDeployment(deploymentID string) (err error) {
