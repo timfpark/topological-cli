@@ -4,6 +4,17 @@ import (
 	"testing"
 )
 
+const expectedValuesYamlString = `cpuRequest: '250m'
+cpuLimit: '1000m'
+imagePullPolicy: 'Always'
+imagePullSecrets: acr-tpark
+logSeverity: 'info'
+memoryRequest: '256Mi'
+memoryLimit: '512Mi'
+replicas: 1
+serviceName: 'predict-arrivals'
+servicePort: 80`
+
 func TestLoadEnvironment(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 	environment, err := builder.LoadEnvironment()
@@ -69,5 +80,20 @@ func TestLoadTopology(t *testing.T) {
 
 	if len(topology.Nodes["predictArrivals"].Outputs) != 1 {
 		t.Errorf("predictArrivals outputs was not parsed correctly")
+	}
+}
+
+func TestFillValuesYaml(t *testing.T) {
+	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
+	err := builder.Load()
+	if err != nil {
+		t.Errorf("builder failed to load: %s", err)
+	}
+
+	deploymentID := "predict-arrivals"
+	valuesYamlString := builder.FillValuesYAML(deploymentID)
+
+	if valuesYamlString != expectedValuesYamlString {
+		t.Errorf("stage.js did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", valuesYamlString, expectedValuesYamlString)
 	}
 }

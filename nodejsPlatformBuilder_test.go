@@ -8,7 +8,7 @@ import (
 )
 
 const expectedWriteLocationsPackageJson = `{
-    "name": "stage-write-locations",
+    "name": "write-locations",
     "version": "1.0.0",
     "main": "stage.js",
     "scripts": {
@@ -16,16 +16,17 @@ const expectedWriteLocationsPackageJson = `{
     },
     "dependencies": {
         "express": "^4.16.2",
-        "prom-client": "^10.2.2",
+        "morgan": "^1.9.0",
+        "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.29",
+        "topological": "^1.0.32",
         "cassandra-driver":"^3.3.0",
         "topological-kafka":"^1.0.4"
     }
 }`
 
 const expectedPackageJson = `{
-    "name": "stage-predict-arrivals",
+    "name": "predict-arrivals",
     "version": "1.0.0",
     "main": "stage.js",
     "scripts": {
@@ -33,9 +34,10 @@ const expectedPackageJson = `{
     },
     "dependencies": {
         "express": "^4.16.2",
-        "prom-client": "^10.2.2",
+        "morgan": "^1.9.0",
+        "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.29",
+        "topological": "^1.0.32",
         "topological-kafka":"^1.0.4"
     }
 }`
@@ -43,6 +45,7 @@ const expectedPackageJson = `{
 const expectedImports = `const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
+    morgan = require('morgan'),
     server = require('http').createServer(app),
     promClient = require('prom-client'),
     estimatedArrivalsConnectionClass = require('topological-kafka'),
@@ -51,12 +54,12 @@ const expectedImports = `const { Node, Topology } = require('topological'),
 
 const expectedConnectionsString = `let estimatedArrivalsConnection = new estimatedArrivalsConnectionClass({
     "id": "estimatedArrivals",
-    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"estimated-arrivals"}
+    "config": {"endpoint": process.env.KAFKA_ENDPOINT, "keyField": process.env.ESTIMATED_ARRIVALS_KEYFIELD, "topic": process.env.ESTIMATED_ARRIVALS_TOPIC}
 });
 
 let locationsConnection = new locationsConnectionClass({
     "id": "locations",
-    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
+    "config": {"endpoint": process.env.KAFKA_ENDPOINT, "keyField": process.env.LOCATIONS_KEYFIELD, "topic": process.env.LOCATIONS_TOPIC}
 });`
 
 const expectedProcessorsString = `let predictArrivalsProcessor = new predictArrivalsProcessorClass({
@@ -94,6 +97,7 @@ topology.start(err => {
 const expectedStageJs = `const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
+    morgan = require('morgan'),
     server = require('http').createServer(app),
     promClient = require('prom-client'),
     estimatedArrivalsConnectionClass = require('topological-kafka'),
@@ -104,12 +108,12 @@ const expectedStageJs = `const { Node, Topology } = require('topological'),
 
 let estimatedArrivalsConnection = new estimatedArrivalsConnectionClass({
     "id": "estimatedArrivals",
-    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"estimated-arrivals"}
+    "config": {"endpoint": process.env.KAFKA_ENDPOINT, "keyField": process.env.ESTIMATED_ARRIVALS_KEYFIELD, "topic": process.env.ESTIMATED_ARRIVALS_TOPIC}
 });
 
 let locationsConnection = new locationsConnectionClass({
     "id": "locations",
-    "config": {"endpoint":"kafka-zookeeper.kafka.svc.cluster.local:2181","keyField":"busId","topic":"locations"}
+    "config": {"endpoint": process.env.KAFKA_ENDPOINT, "keyField": process.env.LOCATIONS_KEYFIELD, "topic": process.env.LOCATIONS_TOPIC}
 });
 
 // PROCESSORS ==============================================================
@@ -139,15 +143,22 @@ topology.start(err => {
         return process.exit(0);
     }
 });
-`
 
-const expectedValuesYamlString = `serviceName: "predict-arrivals"
-servicePort: 80
-replicas: 2
-imagePullPolicy: "Always"
-imagePullSecrets: acr-tpark
-cpu: "250m"
-memory: "250Mi"`
+
+// METRICS ================================================================
+
+app.get("/metrics", (req, res) => {
+    res.set("Content-Type", promClient.register.contentType);
+    res.end(promClient.register.metrics());
+});
+
+app.use(morgan("combined"));
+
+server.listen(process.env.PORT);
+topology.log.info("listening on port: " + process.env.PORT);
+
+promClient.collectDefaultMetrics();
+`
 
 func TestFillPackageJson(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
@@ -312,30 +323,6 @@ func TestFillStage(t *testing.T) {
 	}
 }
 
-func TestFillValuesYaml(t *testing.T) {
-	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
-	err := builder.Load()
-	if err != nil {
-		t.Errorf("builder failed to load: %s", err)
-	}
-
-	deploymentID := "predict-arrivals"
-	deployment := builder.Environment.Deployments[deploymentID]
-
-	nodeJsBuilder := NodeJsPlatformBuilder{
-		DeploymentID: deploymentID,
-		Deployment:   deployment,
-		Topology:     builder.Topology,
-		Environment:  builder.Environment,
-	}
-
-	valuesYamlString := nodeJsBuilder.FillValuesYaml()
-
-	if valuesYamlString != expectedValuesYamlString {
-		t.Errorf("stage.js did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", valuesYamlString, expectedValuesYamlString)
-	}
-}
-
 func TestBuild(t *testing.T) {
 	builder := NewBuilder("fixtures/topology.json", "fixtures/environment.json")
 
@@ -358,40 +345,40 @@ func TestBuild(t *testing.T) {
 		"build",
 		"build/production",
 		"build/production/deploy-all",
-		"build/production/common",
-		"build/production/common/deploy-stage",
-		"build/production/common/pipeline-stage",
-		"build/production/common/pipeline-stage/Chart.yaml",
-		"build/production/common/pipeline-stage/templates",
-		"build/production/common/pipeline-stage/templates/deployment.yaml",
-		"build/production/common/pipeline-stage/templates/service.yaml",
 		"build/production/notify-arrivals",
-		"build/production/notify-arrivals/deploy-stage",
 		"build/production/notify-arrivals/Dockerfile",
-		"build/production/notify-arrivals/start-stage",
-		"build/production/notify-arrivals/values.yaml",
-		"build/production/notify-arrivals/code",
-		"build/production/notify-arrivals/code/package.json",
-		"build/production/notify-arrivals/code/stage.js",
-		"build/production/notify-arrivals/code/processors/notifyArrivals.js",
+		"build/production/notify-arrivals/devops",
+		"build/production/notify-arrivals/devops/Chart.yaml",
+		"build/production/notify-arrivals/devops/start-stage",
+		"build/production/notify-arrivals/devops/values.yaml",
+		"build/production/notify-arrivals/devops/templates/deployment.yaml",
+		"build/production/notify-arrivals/devops/templates/service.yaml",
+		"build/production/notify-arrivals",
+		"build/production/notify-arrivals/package.json",
+		"build/production/notify-arrivals/stage.js",
+		"build/production/notify-arrivals/processors/notifyArrivals.js",
 		"build/production/write-locations",
-		"build/production/write-locations/deploy-stage",
 		"build/production/write-locations/Dockerfile",
-		"build/production/write-locations/start-stage",
-		"build/production/write-locations/values.yaml",
-		"build/production/write-locations/code",
-		"build/production/write-locations/code/package.json",
-		"build/production/write-locations/code/stage.js",
-		"build/production/write-locations/code/processors/writeLocations.js",
+		"build/production/write-locations/package.json",
+		"build/production/write-locations/stage.js",
+		"build/production/write-locations/processors/writeLocations.js",
+		"build/production/write-locations/devops",
+		"build/production/write-locations/devops/Chart.yaml",
+		"build/production/write-locations/devops/start-stage",
+		"build/production/write-locations/devops/values.yaml",
+		"build/production/write-locations/devops/templates/deployment.yaml",
+		"build/production/write-locations/devops/templates/service.yaml",
 		"build/production/predict-arrivals",
-		"build/production/predict-arrivals/deploy-stage",
 		"build/production/predict-arrivals/Dockerfile",
-		"build/production/predict-arrivals/start-stage",
-		"build/production/predict-arrivals/values.yaml",
-		"build/production/predict-arrivals/code",
-		"build/production/predict-arrivals/code/package.json",
-		"build/production/predict-arrivals/code/stage.js",
-		"build/production/predict-arrivals/code/processors/predictArrivals.js",
+		"build/production/predict-arrivals/package.json",
+		"build/production/predict-arrivals/stage.js",
+		"build/production/predict-arrivals/processors/predictArrivals.js",
+		"build/production/predict-arrivals/devops",
+		"build/production/predict-arrivals/devops/Chart.yaml",
+		"build/production/predict-arrivals/devops/start-stage",
+		"build/production/predict-arrivals/devops/values.yaml",
+		"build/production/predict-arrivals/devops/templates/deployment.yaml",
+		"build/production/predict-arrivals/devops/templates/service.yaml",
 	}
 
 	for _, directory := range expectedItems {
@@ -400,7 +387,7 @@ func TestBuild(t *testing.T) {
 		}
 	}
 
-	packageJsonBytes, err := ioutil.ReadFile("build/production/predict-arrivals/code/package.json")
+	packageJsonBytes, err := ioutil.ReadFile("build/production/predict-arrivals/package.json")
 	if err != nil {
 		t.Errorf("Could not read package.json: %s", err)
 	}
@@ -410,7 +397,7 @@ func TestBuild(t *testing.T) {
 		t.Errorf("package.json did not match:-->%s<-- vs. -->%s<-- did not complete successfully.", packageJsonBytes, expectedPackageJson)
 	}
 
-	stageJsBytes, err := ioutil.ReadFile("build/production/predict-arrivals/code/stage.js")
+	stageJsBytes, err := ioutil.ReadFile("build/production/predict-arrivals/stage.js")
 	if err != nil {
 		t.Errorf("Could not read stage.js: %s", err)
 	}

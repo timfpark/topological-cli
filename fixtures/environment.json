@@ -11,9 +11,9 @@
                 "topological-kafka": "^1.0.4"
             },
             "config": {
-                "keyField": "busId",
-                "topic": "locations",
-                "endpoint": "kafka-zookeeper.kafka.svc.cluster.local:2181"
+                "keyField": "locations-keyfield",
+                "topic": "locations-topic",
+                "endpoint": "kafka-endpoint"
             }
         },
         "estimatedArrivals": {
@@ -22,49 +22,67 @@
                 "topological-kafka": "^1.0.4"
             },
             "config": {
-                "keyField": "busId",
-                "topic": "estimated-arrivals",
-                "endpoint": "kafka-zookeeper.kafka.svc.cluster.local:2181"
+                "keyField": "estimated-arrivals-keyfield",
+                "topic": "estimated-arrivals-topic",
+                "endpoint": "kafka-endpoint"
             }
         }
     },
     "processors": {
         "writeLocations": {
             "config": {
-                "cassandraEndpoints": "[\"localhost\"]"
+                "cassandraEndpoints": "cassandra-endpoint"
             }
         }
     },
     "deployments": {
         "write-locations": {
-            "nodes": [
-                "writeLocations"
-            ],
+            "nodes": ["writeLocations"],
             "replicas": {
-                "min": 2,
-                "max": 4
+                "min": 1
             },
-            "concurrency": 30
+            "concurrency": 5,
+            "cpu": {
+                "request": "250m",
+                "limit": "1000m"
+            },
+            "logSeverity": "info",
+            "memory": {
+                "request": "256Mi",
+                "limit": "512Mi"
+            }
         },
         "predict-arrivals": {
-            "nodes": [
-                "predictArrivals"
-            ],
+            "nodes": ["predictArrivals"],
             "replicas": {
-                "min": 2,
-                "max": 4
+                "min": 1
             },
-            "concurrency": 10
+            "concurrency": 5,
+            "cpu": {
+                "request": "250m",
+                "limit": "1000m"
+            },
+            "logSeverity": "info",
+            "memory": {
+                "request": "256Mi",
+                "limit": "512Mi"
+            }
         },
         "notify-arrivals": {
-            "nodes": [
-                "notifyArrivals"
-            ],
+            "nodes": ["notifyArrivals"],
             "replicas": {
-                "min": 2,
-                "max": 4
+                "min": 1
             },
-            "concurrency": 10
+            "concurrency": 5,
+            "cpu": {
+                "request": "250m",
+                "limit": "1000m"
+            },
+            "logSeverity": "info",
+            "memory": {
+                "request": "256Mi",
+                "limit": "512Mi"
+            }
         }
     }
 }

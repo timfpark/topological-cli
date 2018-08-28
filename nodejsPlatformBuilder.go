@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,15 +27,14 @@ CONTAINER_REPO=%s SERVICE_NAME=%s SERVICE_NAMESPACE=%s APP_TYPE=pipeline-stage .
 
 const dockerFile = `FROM node:carbon
 
-WORKDIR /code
+WORKDIR /app
 
-COPY code/. .
+COPY . .
 RUN npm install
-COPY ./start-stage .
 
 EXPOSE 80
 
-CMD [ "./start-stage" ]
+CMD [ "devops/start-service" ]
 `
 
 const startStage = `#!/bin/bash
@@ -74,7 +72,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
 	sort.Strings(dependencyStrings)
 
 	return fmt.Sprintf(`{
-    "name": "stage-%s",
+    "name": "%s",
     "version": "1.0.0",
     "main": "stage.js",
     "scripts": {
@@ -85,7 +83,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
         "morgan": "^1.9.0",
         "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.30",
+        "topological": "^1.0.32",
 %s
     }
 }`,
@@ -147,18 +145,11 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 	instantiations := []string{}
 
 	for connectionId, _ := range connections {
-		connection := b.Environment.Connections[connectionId]
-		var connectionConfigJson string
-		if len(connection.Config) > 0 {
-			connectionConfigJsonBytes, _ := json.Marshal(connection.Config)
-			connectionConfigJson = string(connectionConfigJsonBytes)
-		} else {
-			connectionConfigJson = "{}"
-		}
+		connectionConfigJSON := b.buildConfig(b.Environment.Connections[connectionId].Config)
 		connectionInstantiation := fmt.Sprintf(`let %sConnection = new %sConnectionClass({
     "id": "%s",
     "config": %s
-});`, connectionId, connectionId, connectionId, connectionConfigJson)
+});`, connectionId, connectionId, connectionId, connectionConfigJSON)
 		instantiations = append(instantiations, connectionInstantiation)
 	}
 
@@ -167,22 +158,34 @@ func (b *NodeJsPlatformBuilder) FillConnections() (connectionInstantiations stri
 	return strings.Join(instantiations, "\n\n")
 }
 
+func (b *NodeJsPlatformBuilder) buildConfig(config map[string]interface{}) (configJSON string) {
+
+	configKeys := make([]string, 0, len(config))
+	for k := range config {
+		configKeys = append(configKeys, k)
+	}
+	sort.Strings(configKeys)
+
+	configEntries := []string{}
+
+	for _, key := range configKeys {
+		secret := config[key]
+		envVarName := strings.ToUpper(strings.Replace(secret.(string), "-", "_", -1))
+		configEntries = append(configEntries, fmt.Sprintf(`"%s": process.env.%s`, key, envVarName))
+	}
+
+	return fmt.Sprintf(`{%s}`, strings.Join(configEntries, ", "))
+}
+
 func (b *NodeJsPlatformBuilder) FillProcessors() (processorInstantiations string) {
 	instantiations := []string{}
 
-	for _, nodeId := range b.Deployment.Nodes {
-		processorConfig := b.Environment.Processors[nodeId].Config
-		var processorConfigJson string
-		if len(processorConfig) > 0 {
-			processorConfigJsonBytes, _ := json.Marshal(processorConfig)
-			processorConfigJson = string(processorConfigJsonBytes)
-		} else {
-			processorConfigJson = "{}"
-		}
+	for _, nodeID := range b.Deployment.Nodes {
+		processorConfigJSON := b.buildConfig(b.Environment.Processors[nodeID].Config)
 		processorInstantiation := fmt.Sprintf(`let %sProcessor = new %sProcessorClass({
     "id": "%s",
     "config": %s
-});`, nodeId, nodeId, nodeId, processorConfigJson)
+});`, nodeID, nodeID, nodeID, processorConfigJSON)
 		instantiations = append(instantiations, processorInstantiation)
 	}
 
@@ -294,27 +297,6 @@ promClient.collectDefaultMetrics();
 `, imports, connections, processors, topology)
 }
 
-func (b *NodeJsPlatformBuilder) FillValuesYaml() (valuesYaml string) {
-	CPU := "250m"
-	if b.Deployment.Replicas.CPU != "" {
-		CPU = b.Deployment.Replicas.CPU
-	}
-
-	Memory := "250Mi"
-	if b.Deployment.Replicas.Memory != "" {
-		Memory = b.Deployment.Replicas.Memory
-	}
-
-	return fmt.Sprintf(`serviceName: "%s"
-serviceNamespace: "%s"
-servicePort: 80
-replicas: %d
-imagePullPolicy: "Always"
-imagePullSecrets: %s
-cpu: "%s"
-memory: "%s"`, b.DeploymentID, b.Environment.Namespace, b.Deployment.Replicas.Min, b.Environment.PullSecret, CPU, Memory)
-}
-
 func CopyFile(sourcePath string, destPath string) (err error) {
 	sourceBytes, err := ioutil.ReadFile(sourcePath)
 	if err != nil {
@@ -324,25 +306,29 @@ func CopyFile(sourcePath string, destPath string) (err error) {
 	return ioutil.WriteFile(destPath, sourceBytes, 0644)
 }
 
-func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
+func (b *NodeJsPlatformBuilder) BuildSource() (err error) {
 	b.DeploymentPath = path.Join("build", b.Environment.Tier, b.DeploymentID)
-	err = os.Mkdir(b.DeploymentPath, 0755)
+
+	//  deployStage := fmt.Sprintf(deployStageTemplate, b.Environment.ContainerRepo, b.DeploymentID, b.Environment.Namespace)
+	err = ioutil.WriteFile(path.Join(b.DeploymentPath, "Dockerfile"), []byte(dockerFile), 0644)
 	if err != nil {
 		return err
 	}
 
-	deployStage := fmt.Sprintf(deployStageTemplate, b.Environment.ContainerRepo, b.DeploymentID, b.Environment.Namespace)
-	ioutil.WriteFile(path.Join(b.DeploymentPath, "deploy-stage"), []byte(deployStage), 0755)
-	ioutil.WriteFile(path.Join(b.DeploymentPath, "Dockerfile"), []byte(dockerFile), 0644)
-	ioutil.WriteFile(path.Join(b.DeploymentPath, "start-stage"), []byte(startStage), 0755)
-	ioutil.WriteFile(path.Join(b.DeploymentPath, "values.yaml"), []byte(b.FillValuesYaml()), 0644)
+	devopsPath := path.Join(b.DeploymentPath, "devops")
+
+	err = ioutil.WriteFile(path.Join(devopsPath, "start-stage"), []byte(startStage), 0755)
+	if err != nil {
+		return err
+	}
 
 	// create directory for code (./build/{deploymentId}/code)
-	b.CodePath = path.Join(b.DeploymentPath, "code")
-	err = os.Mkdir(b.CodePath, 0755)
+	b.CodePath = b.DeploymentPath
+	/*err = os.Mkdir(b.CodePath, 0755)
 	if err != nil {
 		return err
 	}
+	*/
 
 	// create directoatry for code (./build/{deploymentId}/code/processors)
 	b.ProcessorPath = path.Join(b.CodePath, "processors")
@@ -352,10 +338,16 @@ func (b *NodeJsPlatformBuilder) BuildDeployment() (err error) {
 	}
 
 	// create package.json
-	ioutil.WriteFile(path.Join(b.CodePath, "package.json"), []byte(b.FillPackageJson()), 0644)
+	err = ioutil.WriteFile(path.Join(b.CodePath, "package.json"), []byte(b.FillPackageJson()), 0644)
+	if err != nil {
+		return err
+	}
 
 	// create stage.js
-	ioutil.WriteFile(path.Join(b.CodePath, "stage.js"), []byte(b.FillStage()), 0644)
+	err = ioutil.WriteFile(path.Join(b.CodePath, "stage.js"), []byte(b.FillStage()), 0644)
+	if err != nil {
+		return err
+	}
 
 	// copy processors down into builds
 	err = b.CopyProcessors()

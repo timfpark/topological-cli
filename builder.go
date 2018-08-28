@@ -7,11 +7,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 )
 
 type Builder struct {
 	TopologyPath    string
 	EnvironmentPath string
+
+	DeploymentPath string
 
 	Topology    Topology
 	Environment Environment
@@ -19,6 +22,7 @@ type Builder struct {
 
 // DATE_TAG=`date -u +"%Y%m%dT%H%M%SZ"\`
 
+/*
 const commonDeployStage = `#!/bin/bash
 
 kubectl create namespace $SERVICE_NAMESPACE
@@ -31,10 +35,11 @@ docker push $RELEASE_TAG
 
 helm upgrade $SERVICE_NAME --namespace $SERVICE_NAMESPACE --install --set image=$RELEASE_TAG --values=./values.yaml ../common/$APP_TYPE/.
 `
+*/
 
-const chartYaml = `name: pipeline-stage`
+const chartYAMLTemplate = `name: %s`
 
-const deploymentYaml = `apiVersion: apps/v1beta1
+const deploymentYAMLTemplate = `apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: {{ .Values.serviceName }}
@@ -55,6 +60,7 @@ spec:
       - name: {{ .Values.serviceName }}
         image: {{ .Values.image }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
+        env:%s
         ports:
         - containerPort: {{ .Values.servicePort }}
           protocol: TCP
@@ -79,6 +85,17 @@ spec:
   sessionAffinity: None
   type: ClusterIP
 `
+
+const valuesYAMLTemplate = `cpuRequest: '%s'
+cpuLimit: '%s'
+imagePullPolicy: 'Always'
+imagePullSecrets: %s
+logSeverity: '%s'
+memoryRequest: '%s'
+memoryLimit: '%s'
+replicas: %d
+serviceName: '%s'
+servicePort: 80`
 
 func NewBuilder(topologyPath string, environmentPath string) *Builder {
 	return &Builder{
@@ -166,14 +183,121 @@ func (b *Builder) MakeBuilder(deploymentID string) (platformBuilder PlatformBuil
 	return platformBuilder, nil
 }
 
+func (b *Builder) addSecretEnvVarMappings(secretEnvVarMappings map[string]string, config map[string]interface{}) {
+	for _, secret := range config {
+		envVarName := strings.ToUpper(strings.Replace(secret.(string), "-", "_", -1))
+
+		secretEnvVarMappings[secret.(string)] = envVarName
+	}
+}
+
+func (b *Builder) collectEnvVarSecretMappings(deploymentID string) (secretEnvVarMappings map[string]string) {
+	secretEnvVarMappings = map[string]string{}
+
+	deployment := b.Environment.Deployments[deploymentID]
+
+	// check to make sure platform is the same across the nodes of the deployment
+	for nodeIdx, _ := range deployment.Nodes {
+		nodeId := deployment.Nodes[nodeIdx]
+		node, nodeExists := b.Topology.Nodes[nodeId]
+
+		if !nodeExists {
+			return nil
+		}
+
+		for _, connectionId := range node.Inputs {
+			connection := b.Environment.Connections[connectionId]
+			b.addSecretEnvVarMappings(secretEnvVarMappings, connection.Config)
+		}
+
+		for _, connectionId := range node.Outputs {
+			connection := b.Environment.Connections[connectionId]
+			b.addSecretEnvVarMappings(secretEnvVarMappings, connection.Config)
+		}
+
+		b.addSecretEnvVarMappings(secretEnvVarMappings, b.Environment.Processors[deploymentID].Config)
+	}
+
+	return secretEnvVarMappings
+}
+
+func buildEnvVarSecretBlock(secret string, envVar string) (envVarBlock string) {
+	return fmt.Sprintf(`
+        - name: %s
+          valueFrom:
+            secretKeyRef:
+              name: %s
+              key: %s`, envVar, secret, envVar)
+}
+
+func (b *Builder) buildDeploymentSecretsEnvVarBlock(deploymentID string) (envVarBlock string) {
+	envVarSecretEntries := ""
+
+	envVarSecretMappings := b.collectEnvVarSecretMappings(deploymentID)
+	for secret, envVar := range envVarSecretMappings {
+		envVarSecretEntries += buildEnvVarSecretBlock(secret, envVar)
+	}
+
+	return envVarSecretEntries
+}
+
+func (b *Builder) FillValuesYAML(deploymentID string) (valuesYAML string) {
+	deployment := b.Environment.Deployments[deploymentID]
+	return fmt.Sprintf(valuesYAMLTemplate, deployment.CPU.Request, deployment.CPU.Limit, b.Environment.PullSecret, deployment.LogSeverity, deployment.Memory.Request, deployment.Memory.Limit, deployment.Replicas.Min, deploymentID)
+}
+
 func (b *Builder) BuildDeployment(deploymentID string) (err error) {
 	platformBuilder, err := b.MakeBuilder(deploymentID)
-
 	if err != nil {
 		return err
 	}
 
-	return platformBuilder.BuildDeployment()
+	b.DeploymentPath = path.Join("build", b.Environment.Tier, deploymentID)
+	err = os.Mkdir(b.DeploymentPath, 0755)
+	if err != nil {
+		return err
+	}
+
+	devopsDir := path.Join(b.DeploymentPath, "devops")
+	err = os.Mkdir(devopsDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = platformBuilder.BuildSource()
+	if err != nil {
+		return err
+	}
+
+	valuesYAML := b.FillValuesYAML(deploymentID)
+	err = ioutil.WriteFile(path.Join(devopsDir, "values.yaml"), []byte(valuesYAML), 0755)
+	if err != nil {
+		return err
+	}
+
+	chartYAML := fmt.Sprintf(chartYAMLTemplate, deploymentID)
+	err = ioutil.WriteFile(path.Join(devopsDir, "Chart.yaml"), []byte(chartYAML), 0755)
+	if err != nil {
+		return err
+	}
+
+	templateDir := path.Join(devopsDir, "templates")
+	err = os.Mkdir(templateDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	deploymentEnvVarSecretsBlock := b.buildDeploymentSecretsEnvVarBlock(deploymentID)
+	deploymentYAML := fmt.Sprintf(deploymentYAMLTemplate, deploymentEnvVarSecretsBlock)
+
+	err = ioutil.WriteFile(path.Join(templateDir, "deployment.yaml"), []byte(deploymentYAML), 0644)
+	if err != nil {
+		return err
+	}
+
+	ioutil.WriteFile(path.Join(templateDir, "service.yaml"), []byte(serviceYaml), 0644)
+
+	return nil
 }
 
 func (b *Builder) Build() error {
@@ -212,39 +336,5 @@ func (b *Builder) Build() error {
 
 	ioutil.WriteFile(path.Join(tierDir, "deploy-all"), []byte(deployAllScript), 0755)
 
-	// copy common deployment elements down into build
-	commonDir := path.Join(tierDir, "common")
-	err = os.Mkdir(commonDir, 0755)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(path.Join(commonDir, "deploy-stage"), []byte(commonDeployStage), 0755)
-	if err != nil {
-		return err
-	}
-
-	helmDir := path.Join(commonDir, "pipeline-stage")
-	err = os.Mkdir(helmDir, 0755)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(path.Join(helmDir, "Chart.yaml"), []byte(chartYaml), 0755)
-	if err != nil {
-		return err
-	}
-
-	templateDir := path.Join(helmDir, "templates")
-	err = os.Mkdir(templateDir, 0755)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(path.Join(templateDir, "deployment.yaml"), []byte(deploymentYaml), 0644)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(path.Join(templateDir, "service.yaml"), []byte(serviceYaml), 0644)
+	return nil
 }
