@@ -34,7 +34,7 @@ RUN npm install
 
 EXPOSE 80
 
-CMD [ "devops/start-service" ]
+CMD [ "devops/start-stage" ]
 `
 
 const startStage = `#!/bin/bash
@@ -83,7 +83,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
         "morgan": "^1.9.0",
         "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.32",
+        "topological": "^1.0.33",
 %s
     }
 }`,

@@ -61,6 +61,8 @@ spec:
         image: {{ .Values.image }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         env:%s
+        - name: LOG_LEVEL
+          value: {{ .Values.logSeverity }}
         ports:
         - containerPort: {{ .Values.servicePort }}
           protocol: TCP
@@ -199,8 +201,8 @@ func (b *Builder) collectEnvVarSecretMappings(deploymentID string) (secretEnvVar
 
 	// check to make sure platform is the same across the nodes of the deployment
 	for nodeIdx, _ := range deployment.Nodes {
-		nodeId := deployment.Nodes[nodeIdx]
-		node, nodeExists := b.Topology.Nodes[nodeId]
+		nodeID := deployment.Nodes[nodeIdx]
+		node, nodeExists := b.Topology.Nodes[nodeID]
 
 		if !nodeExists {
 			return nil
@@ -216,7 +218,7 @@ func (b *Builder) collectEnvVarSecretMappings(deploymentID string) (secretEnvVar
 			b.addSecretEnvVarMappings(secretEnvVarMappings, connection.Config)
 		}
 
-		b.addSecretEnvVarMappings(secretEnvVarMappings, b.Environment.Processors[deploymentID].Config)
+		b.addSecretEnvVarMappings(secretEnvVarMappings, b.Environment.Processors[nodeID].Config)
 	}
 
 	return secretEnvVarMappings
