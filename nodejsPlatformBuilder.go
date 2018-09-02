@@ -83,7 +83,7 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
         "morgan": "^1.9.0",
         "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.33",
+        "topological": "^1.0.39",
 %s
     }
 }`,

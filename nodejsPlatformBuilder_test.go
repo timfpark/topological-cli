@@ -19,7 +19,7 @@ const expectedWriteLocationsPackageJson = `{
         "morgan": "^1.9.0",
         "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.32",
+        "topological": "^1.0.39",
         "cassandra-driver":"^3.3.0",
         "topological-kafka":"^1.0.4"
     }
@@ -37,7 +37,7 @@ const expectedPackageJson = `{
         "morgan": "^1.9.0",
         "prom-client": "^11.0.0",
         "request": "^2.83.0",
-        "topological": "^1.0.32",
+        "topological": "^1.0.39",
         "topological-kafka":"^1.0.4"
     }
 }`
