@@ -80,7 +80,8 @@ func (b *NodeJsPlatformBuilder) FillPackageJson() (packageJson string) {
     },
     "dependencies": {
         "express": "^4.16.2",
-        "morgan": "^1.9.0",
+		"morgan": "^1.9.0",
+		"node-fetch": "^2.2.0",
         "prom-client": "^11.0.0",
         "request": "^2.83.0",
         "topological": "^1.0.39",
@@ -129,7 +130,9 @@ func (b *NodeJsPlatformBuilder) FillImports() (imports string) {
 		processorImports = append(processorImports, importString)
 	}
 
-	return fmt.Sprintf(`const { Node, Topology } = require('topological'),
+	return fmt.Sprintf(`global.fetch = require('node-fetch');
+
+const { Node, Topology } = require('topological'),
     express = require('express'),
     app = express(),
     morgan = require('morgan'),
