@@ -25,7 +25,7 @@ const deployStageTemplate = `#/bin/bash
 CONTAINER_REPO=%s SERVICE_NAME=%s SERVICE_NAMESPACE=%s APP_TYPE=pipeline-stage ../common/deploy-stage
 `
 
-const dockerFile = `FROM node:carbon
+const dockerFile = `FROM node:dubnium
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ RUN npm install
 
 EXPOSE 80
 
-CMD [ "devops/start-stage" ]
+CMD [ "./start-stage" ]
 `
 
 const startStage = `#!/bin/bash
@@ -317,22 +317,13 @@ func (b *NodeJsPlatformBuilder) BuildSource() (err error) {
 		return err
 	}
 
-	devopsPath := path.Join(b.DeploymentPath, "devops")
-
-	err = ioutil.WriteFile(path.Join(devopsPath, "start-stage"), []byte(startStage), 0755)
-	if err != nil {
+	if err = ioutil.WriteFile(path.Join(b.DeploymentPath, "start-stage"), []byte(startStage), 0755); err != nil {
 		return err
 	}
 
 	// create directory for code (./build/{deploymentId}/code)
 	b.CodePath = b.DeploymentPath
-	/*err = os.Mkdir(b.CodePath, 0755)
-	if err != nil {
-		return err
-	}
-	*/
 
-	// create directoatry for code (./build/{deploymentId}/code/processors)
 	b.ProcessorPath = path.Join(b.CodePath, "processors")
 	err = os.Mkdir(b.ProcessorPath, 0755)
 	if err != nil {
